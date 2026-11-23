@@ -1,0 +1,132 @@
+# Whole platform:   docker compose up --build
+# Infrastructure only (run services from your IDE):   docker compose up -d postgres kafka redis
+
+x-service: &service
+  depends_on:
+    postgres:
+      condition: service_healthy
+    kafka:
+      condition: service_started
+  environment: &service-env
+    DB_USERNAME: fincore
+    DB_PASSWORD: fincore
+    KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    KAFKA_ENABLED: "true"
+    # the dev defaults below are for local use only; override them anywhere else
+    JWT_SECRET: ${JWT_SECRET:-ZmluY29yZS1kZXYtb25seS1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2}
+    INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key-change-me}
+    CUSTOMER_SERVICE_URL: http://customer-service:8082
+    CORE_SERVICE_URL: http://banking-core:8083
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: fincore
+      POSTGRES_PASSWORD: fincore
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fincore"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # Single-node KRaft broker. localhost:9092 for the host, kafka:29092 inside the compose network.
+  kafka:
+    image: apache/kafka:3.8.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+
+  api-gateway:
+    build: { context: ., args: { MODULE: api-gateway } }
+    depends_on: [auth-service, customer-service, banking-core, payment-service, scheduler-service, redis]
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8081
+      CUSTOMER_SERVICE_URL: http://customer-service:8082
+      CORE_SERVICE_URL: http://banking-core:8083
+      PAYMENT_SERVICE_URL: http://payment-service:8084
+      SCHEDULER_SERVICE_URL: http://scheduler-service:8086
+      REDIS_HOST: redis
+      REDIS_ENABLED: "true"
+    ports:
+      - "8080:8080"
+
+  auth-service:
+    <<: *service
+    build: { context: ., args: { MODULE: auth-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fincore_auth
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe!123}
+    ports:
+      - "8081:8081"
+
+  customer-service:
+    <<: *service
+    build: { context: ., args: { MODULE: customer-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fincore_customer
+    ports:
+      - "8082:8082"
+
+  banking-core:
+    <<: *service
+    build: { context: ., args: { MODULE: banking-core } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fincore_core
+    ports:
+      - "8083:8083"
+
+  payment-service:
+    <<: *service
+    build: { context: ., args: { MODULE: payment-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fincore_payment
+    ports:
+      - "8084:8084"
+
+  notification-service:
+    <<: *service
+    build: { context: ., args: { MODULE: notification-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fincore_notification
+    ports:
+      - "8085:8085"
+
+  scheduler-service:
+    <<: *service
+    build: { context: ., args: { MODULE: scheduler-service } }
+    environment:
+      <<: *service-env
+      DB_URL: jdbc:postgresql://postgres:5432/fincore_scheduler
+    ports:
+      - "8086:8086"
+
+volumes:
+  pgdata:

@@ -1,0 +1,14 @@
+fincore:
+  kafka:
+    # events are written to the outbox but only logged, no broker needed
+    enabled: false
+  clients:
+    core:
+      # the LedgerPort is replaced by an in-memory fake in tests; this is never called
+      base-url: http://localhost:1
+  payments:
+    # a payment is "stuck" immediately, and the recovery job only runs when a test calls it
+    recovery-min-age-seconds: 0
+    recovery-interval-ms: 3600000
+  outbox:
+    poll-interval-ms: 3600000

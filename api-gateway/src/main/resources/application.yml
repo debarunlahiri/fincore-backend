@@ -1,0 +1,69 @@
+server:
+  port: 8080
+  shutdown: graceful
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 200ms
+  cloud:
+    gateway:
+      httpclient:
+        connect-timeout: 1000
+        response-timeout: 20s
+      default-filters:
+        # clients can never present the service-to-service key
+        - RemoveRequestHeader=X-Internal-Key
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+            allowedMethods: GET,POST,PUT,DELETE,OPTIONS
+            allowedHeaders: "*"
+            exposedHeaders: Idempotent-Replayed,X-Request-Id,Retry-After
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+        - id: customer-service
+          uri: ${CUSTOMER_SERVICE_URL:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/customers/**
+        - id: banking-core
+          uri: ${CORE_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/accounts/**,/api/v1/transfers/**,/api/v1/admin/reconciliation,/api/v1/admin/accounts/**
+        - id: payment-service
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/payments/**
+        - id: scheduler-service
+          uri: ${SCHEDULER_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/v1/standing-instructions/**,/api/v1/admin/standing-instructions/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    redis:
+      # Redis is optional; do not let its absence turn /actuator/health DOWN
+      enabled: ${REDIS_ENABLED:false}
+
+fincore:
+  ratelimit:
+    # Off by default. Set REDIS_ENABLED=true (needs a Redis) to enforce limits.
+    enabled: ${REDIS_ENABLED:false}
+    auth-per-minute: 10
+    money-per-minute: 20

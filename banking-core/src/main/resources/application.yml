@@ -1,0 +1,83 @@
+server:
+  port: 8083
+  shutdown: graceful
+
+spring:
+  application:
+    name: banking-core
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/fincore_core}
+    username: ${DB_USERNAME:fincore}
+    password: ${DB_PASSWORD:fincore}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  jackson:
+    default-property-inclusion: non_null
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 15000
+        request.timeout.ms: 5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+fincore:
+  zone: Asia/Kolkata
+  kafka:
+    enabled: ${KAFKA_ENABLED:true}
+  internal:
+    api-key: ${INTERNAL_API_KEY:dev-internal-key-change-me}
+  security:
+    jwt:
+      secret: ${JWT_SECRET:ZmluY29yZS1kZXYtb25seS1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2}
+  clients:
+    customer:
+      base-url: ${CUSTOMER_SERVICE_URL:http://localhost:8082}
+  account:
+    default-daily-limit: 100000.00
+  fraud:
+    high-value-threshold: 200000.00
+    velocity-max-per-minute: 5
+  outbox:
+    batch-size: 50
+    max-attempts: 5
+    poll-interval-ms: 1000
+
+# Retries and the breaker apply only to DependencyUnavailableException (network failure / 5xx),
+# never to business rejections such as 404 "profile not found".
+resilience4j:
+  retry:
+    instances:
+      customer:
+        max-attempts: 3
+        wait-duration: 200ms
+        retry-exceptions:
+          - com.fincore.common.exception.DependencyUnavailableException
+  circuitbreaker:
+    instances:
+      customer:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        record-exceptions:
+          - com.fincore.common.exception.DependencyUnavailableException

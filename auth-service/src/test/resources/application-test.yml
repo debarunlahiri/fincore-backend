@@ -1,0 +1,11 @@
+fincore:
+  kafka:
+    # events are written to the outbox but only logged, no broker needed
+    enabled: false
+  outbox:
+    # tests call OutboxRelay.relayBatch() explicitly instead of waiting for the scheduler
+    poll-interval-ms: 3600000
+  bootstrap-admin:
+    username: admin
+    email: admin@fincore.test
+    password: TestAdmin!123

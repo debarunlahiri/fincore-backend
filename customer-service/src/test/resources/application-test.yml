@@ -1,0 +1,6 @@
+fincore:
+  kafka:
+    # listeners are disabled; tests call UserRegisteredHandler directly
+    enabled: false
+  outbox:
+    poll-interval-ms: 3600000

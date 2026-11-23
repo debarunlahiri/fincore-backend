@@ -1,0 +1,64 @@
+# Build output
+target/
+build/
+out/
+*.class
+*.jar
+*.war
+*.log
+hs_err_pid*
+dependency-reduced-pom.xml
+.flattened-pom.xml
+
+# Maven wrapper download cache
+.mvn/wrapper/maven-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.sts4-cache/
+.springBeans
+nbproject/
+nbbuild/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets and local configuration: never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+application-local.yml
+application-local.properties
+application-secret*.yml
+k8s/secret.yaml
+k8s/*-secret.yaml
+
+# Local data and tooling
+pgdata/
+*.sql.gz
+*.dump
+*.tmp
+*.swp
+*~
+.claude/settings.local.json
+
+# Test and coverage reports
+coverage/
+jacoco*.exec
+surefire-reports/
+failsafe-reports/
+.testcontainers/

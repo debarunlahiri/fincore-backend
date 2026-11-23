@@ -1,0 +1,14 @@
+fincore:
+  kafka:
+    # events are written to the outbox but only logged, no broker needed
+    enabled: false
+  clients:
+    customer:
+      # CustomerClient is replaced by a mock in tests; this is never called
+      base-url: http://localhost:1
+  fraud:
+    # concurrency tests fire many transfers from one account within a second
+    velocity-max-per-minute: 100000
+  outbox:
+    # tests call OutboxRelay.relayBatch() explicitly instead of waiting for the scheduler
+    poll-interval-ms: 3600000

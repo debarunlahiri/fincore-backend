@@ -1,0 +1,8 @@
+fincore:
+  clients:
+    core:
+      # CorePort is replaced by an in-memory fake in tests; this is never called
+      base-url: http://localhost:1
+  scheduler:
+    # never fires during tests; tests call StandingInstructionService.runDue(...) directly
+    standing-instructions-cron: "0 0 0 1 1 *"

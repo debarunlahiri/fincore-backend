@@ -1,0 +1,62 @@
+server:
+  port: 8081
+  shutdown: graceful
+
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/fincore_auth}
+    username: ${DB_USERNAME:fincore}
+    password: ${DB_PASSWORD:fincore}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  jackson:
+    default-property-inclusion: non_null
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        delivery.timeout.ms: 15000
+        request.timeout.ms: 5000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+fincore:
+  kafka:
+    # false => events are only logged (handy for running a single service without a broker)
+    enabled: ${KAFKA_ENABLED:true}
+  internal:
+    api-key: ${INTERNAL_API_KEY:dev-internal-key-change-me}
+  security:
+    jwt:
+      # Base64 encoded, >= 32 bytes, shared by all services. Override with JWT_SECRET outside local development.
+      secret: ${JWT_SECRET:ZmluY29yZS1kZXYtb25seS1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2}
+      access-ttl: 15m
+      refresh-ttl: 7d
+  outbox:
+    batch-size: 50
+    max-attempts: 5
+    poll-interval-ms: 1000
+  bootstrap-admin:
+    username: ${ADMIN_USERNAME:admin}
+    email: ${ADMIN_EMAIL:admin@fincore.local}
+    password: ${ADMIN_PASSWORD:ChangeMe!123}
