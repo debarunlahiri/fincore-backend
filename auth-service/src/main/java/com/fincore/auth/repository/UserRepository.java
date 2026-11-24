@@ -12,4 +12,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
+
+    java.util.List<User> findByRoleNotOrderByUsername(com.fincore.security.model.Role role);
 }

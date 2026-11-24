@@ -5,7 +5,7 @@ the auth-service; there is no "create profile" endpoint.
 
 - Gateway: `http://localhost:8080/api/v1/customers/...`
 - Direct: `http://localhost:8082/api/v1/customers/...`
-- Authentication: `Authorization: Bearer <customer access token>`. Role `CUSTOMER` only (an admin token gets `403`).
+- Authentication: `Authorization: Bearer <customer access token>`. Role `CUSTOMER` only (a staff token gets `403`).
 
 ```bash
 export BASE=http://localhost:8080

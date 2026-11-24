@@ -87,6 +87,30 @@ public class AuthService {
                 .orElseGet(() -> users.save(new User(username, email, passwordEncoder.encode(rawPassword), Role.ADMIN)));
     }
 
+    /** Creates a staff login (ADMIN, OPERATIONS or COMPLIANCE). No customer profile is created for staff. */
+    @Transactional
+    public User createStaff(String actor, String username, String email, String rawPassword, Role role) {
+        if (!role.isStaff()) {
+            throw FincoreException.badRequest("INVALID_ROLE", "Role must be a staff role");
+        }
+        String u = username.trim().toLowerCase();
+        String e = email.trim().toLowerCase();
+        if (users.existsByUsername(u)) {
+            throw FincoreException.conflict("USERNAME_TAKEN", "Username is already taken");
+        }
+        if (users.existsByEmail(e)) {
+            throw FincoreException.conflict("EMAIL_TAKEN", "Email is already registered");
+        }
+        User user = users.save(new User(u, e, passwordEncoder.encode(rawPassword), role));
+        audit.record(actor, "STAFF_CREATED", "USER", user.getId().toString(), "role=" + role);
+        return user;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<User> listStaff() {
+        return users.findByRoleNotOrderByUsername(Role.CUSTOMER);
+    }
+
     @Transactional
     public Tokens login(String username, String password) {
         User user = users.findByUsername(username.trim().toLowerCase()).orElse(null);

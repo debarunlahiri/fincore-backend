@@ -238,6 +238,77 @@ public class AuthFlowIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void adminCreatesStaffWithDifferentRolesAndTheirAccessDiffers() throws Exception {
+        String compliance = uniqueName();
+        String operations = uniqueName();
+        for (var entry : Map.of(compliance, "COMPLIANCE", operations, "OPERATIONS").entrySet()) {
+            mvc.perform(post("/api/v1/admin/staff")
+                            .header(HttpHeaders.AUTHORIZATION, bearer(adminTokens()))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json(Map.of(
+                                    "username", entry.getKey(),
+                                    "email", entry.getKey() + "@fincore.local",
+                                    "password", "Passw0rd!23",
+                                    "role", entry.getValue()))))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.role").value(entry.getValue()));
+        }
+        JsonNode complianceTokens = loginViaApi(compliance, "Passw0rd!23");
+        JsonNode operationsTokens = loginViaApi(operations, "Passw0rd!23");
+
+        // only COMPLIANCE (and ADMIN) may read the audit log
+        mvc.perform(get("/api/v1/admin/audit").header(HttpHeaders.AUTHORIZATION, bearer(complianceTokens)))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/audit").header(HttpHeaders.AUTHORIZATION, bearer(operationsTokens)))
+                .andExpect(status().isForbidden());
+        // outbox health is visible to both
+        mvc.perform(get("/api/v1/admin/outbox/summary").header(HttpHeaders.AUTHORIZATION, bearer(complianceTokens)))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/outbox/summary").header(HttpHeaders.AUTHORIZATION, bearer(operationsTokens)))
+                .andExpect(status().isOk());
+        // replay changes state: OPERATIONS passes authorization (404 = event not found), COMPLIANCE is forbidden
+        mvc.perform(post("/api/v1/admin/outbox/" + UUID.randomUUID() + "/replay")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(complianceTokens)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/api/v1/admin/outbox/" + UUID.randomUUID() + "/replay")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(operationsTokens)))
+                .andExpect(status().isNotFound());
+        // staff management stays with ADMIN
+        mvc.perform(get("/api/v1/admin/staff").header(HttpHeaders.AUTHORIZATION, bearer(operationsTokens)))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/admin/staff").header(HttpHeaders.AUTHORIZATION, bearer(adminTokens())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.username=='" + compliance + "')].role").value("COMPLIANCE"));
+    }
+
+    @Test
+    void staffCannotBeCreatedWithTheCustomerRole() throws Exception {
+        mvc.perform(post("/api/v1/admin/staff")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(adminTokens()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "username", uniqueName(),
+                                "email", uniqueName() + "@fincore.local",
+                                "password", "Passw0rd!23",
+                                "role", "CUSTOMER"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_ROLE"));
+    }
+
+    @Test
+    void customerCannotCreateStaff() throws Exception {
+        mvc.perform(post("/api/v1/admin/staff")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(registerViaApi(uniqueName())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(Map.of(
+                                "username", uniqueName(),
+                                "email", uniqueName() + "@fincore.local",
+                                "password", "Passw0rd!23",
+                                "role", "ADMIN"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void internalEndpointsAreUnreachableWithAUserToken() throws Exception {
         JsonNode customer = registerViaApi(uniqueName());
 

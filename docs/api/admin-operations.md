@@ -4,7 +4,10 @@ Endpoints that exist on several services because they come from the shared `comm
 tools and the audit log), plus the actuator endpoints every service exposes.
 
 **These are not routed by the gateway.** Call them on the service's own port. All admin endpoints need
-`Authorization: Bearer <admin access token>`; a customer token gets `403 FORBIDDEN`.
+`Authorization: Bearer <staff access token>`; a customer token, or a staff role without access, gets `403 FORBIDDEN`.
+Who may call what: outbox `summary` and `failed` are open to `ADMIN`, `OPERATIONS` and `COMPLIANCE`; outbox `replay`
+needs `ADMIN` or `OPERATIONS`; the audit log needs `ADMIN` or `COMPLIANCE`. Full matrix in
+[README.md](README.md#authentication).
 
 | Service | Port | Outbox + audit endpoints | What its outbox/audit contains |
 | --- | --- | --- | --- |

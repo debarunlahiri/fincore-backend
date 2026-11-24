@@ -6,8 +6,9 @@ service that owns the double-entry ledger.
 - Gateway: `http://localhost:8080` (paths below)
 - Direct: `http://localhost:8083` (same paths)
 - Authentication: `Authorization: Bearer <access token>`.
-  Sections 1-9 are **customer** endpoints (role `CUSTOMER`); sections 10-12 are **admin** endpoints (role `ADMIN`).
-  A customer token on an admin endpoint, or an admin token on a customer endpoint, returns `403 FORBIDDEN`.
+  Sections 1-9 are **customer** endpoints (role `CUSTOMER`); sections 10-12 are **admin** endpoints: reconciliation needs `ADMIN` or `COMPLIANCE`, freeze and unfreeze need
+  `ADMIN` or `OPERATIONS`. A customer token on an admin endpoint, a staff token on a customer endpoint, or a staff
+  role that is not allowed returns `403 FORBIDDEN`. See the role table in [README.md](README.md#authentication).
 
 ```bash
 export BASE=http://localhost:8080

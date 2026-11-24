@@ -68,7 +68,7 @@ public class StandingInstructionController {
 
     /** Operator trigger for the daily job (useful for demos and recovery after downtime). */
     @PostMapping("/admin/standing-instructions/run")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS')")
     public StandingInstructionService.RunSummary runNow() {
         return service.runDue(LocalDate.now(zone));
     }

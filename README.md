@@ -139,6 +139,7 @@ error bodies: **[docs/api/README.md](docs/api/README.md)**.
 | Payment (UPI/IMPS/NEFT) | `POST /api/v1/payments` with header `Idempotency-Key` |
 | Standing instructions | `POST/GET /api/v1/standing-instructions`, `/{id}/pause\|resume\|cancel` |
 | Statement | `GET /api/v1/accounts/{id}/statement`, `/statement.csv?from=&to=` |
+| Staff roles | `ADMIN` (all, plus `POST/GET /api/v1/admin/staff`), `OPERATIONS` (freeze, replay, run instructions), `COMPLIANCE` (audit, reconciliation, read-only outbox); matrix in [docs/api/README.md](docs/api/README.md#authentication) |
 | Admin | `GET /api/v1/admin/reconciliation`, `POST /api/v1/admin/accounts/{id}/freeze\|unfreeze`, `POST /api/v1/admin/standing-instructions/run` |
 
 ## How a transfer stays correct (banking-core)

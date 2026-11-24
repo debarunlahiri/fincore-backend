@@ -20,7 +20,7 @@ Token response (used by register, login and refresh):
 | `tokenType` | string | always `Bearer` |
 | `expiresIn` | number | access token lifetime in seconds (`900`) |
 
-The access token carries `sub` (user id), `username`, `role` (`CUSTOMER` or `ADMIN`), `iat`, `exp`.
+The access token carries `sub` (user id), `username`, `role` (`CUSTOMER`, `ADMIN`, `OPERATIONS` or `COMPLIANCE`), `iat`, `exp`.
 
 ---
 
@@ -290,7 +290,84 @@ X-Request-Id: 0b9e7d5c-1a3f-4c28-a6d4-9f2e1b8c7a65
 
 ---
 
-## Admin endpoints on this service
+## 5. Create a staff user (admin)
 
-Present on this service only through its direct port, see [admin-operations.md](admin-operations.md):
+Creates a login with a staff role. Only `ADMIN` may do this. No customer profile is created for staff. The action is
+written to the audit log as `STAFF_CREATED`.
+
+| | |
+| --- | --- |
+| Method / URL | `POST http://localhost:8080/api/v1/admin/staff` |
+| Direct URL | `POST http://localhost:8081/api/v1/admin/staff` |
+| Auth | `Authorization: Bearer <ADMIN access token>` |
+
+**Request body**
+
+| Field | Type | Rules |
+| --- | --- | --- |
+| `username` | string | required, 3-50 chars, letters, digits, `.`, `_`, `-` |
+| `email` | string | required, valid email |
+| `password` | string | required, 8-72 chars |
+| `role` | string | required, `ADMIN`, `OPERATIONS` or `COMPLIANCE` (`CUSTOMER` is rejected) |
+
+**curl**
+
+```bash
+curl -i -X POST "$BASE/api/v1/admin/staff" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"ops.priya","email":"priya@fincore.local","password":"Passw0rd!23","role":"OPERATIONS"}'
+```
+
+**Success: `201 Created`**
+
+```
+HTTP/1.1 201
+Content-Type: application/json
+X-Request-Id: 1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f
+```
+
+```json
+{
+  "id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9",
+  "username": "ops.priya",
+  "email": "priya@fincore.local",
+  "role": "OPERATIONS",
+  "enabled": true
+}
+```
+
+**Errors**: `400 VALIDATION_FAILED`; `400 INVALID_ROLE` (`"detail": "Role must be a staff role"`);
+`409 USERNAME_TAKEN` / `EMAIL_TAKEN`; `403 FORBIDDEN` for any role except `ADMIN`; `401` without a token.
+
+The new user logs in with the normal `POST /api/v1/auth/login` and receives a token whose `role` is the staff role.
+
+## 6. List staff users (admin)
+
+| | |
+| --- | --- |
+| Method / URL | `GET http://localhost:8080/api/v1/admin/staff` |
+| Direct URL | `GET http://localhost:8081/api/v1/admin/staff` |
+| Auth | `Authorization: Bearer <ADMIN access token>` |
+
+```bash
+curl -i "$BASE/api/v1/admin/staff" -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Success: `200 OK`** (ordered by username; every non-customer user)
+
+```json
+[
+  {"id": "2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6d", "username": "admin", "email": "admin@fincore.local", "role": "ADMIN", "enabled": true},
+  {"id": "5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9", "username": "ops.priya", "email": "priya@fincore.local", "role": "OPERATIONS", "enabled": true}
+]
+```
+
+**Errors**: `403 FORBIDDEN` for any role except `ADMIN`.
+
+---
+
+## Other admin endpoints on this service
+
+Reachable through the direct port only, see [admin-operations.md](admin-operations.md):
 `GET http://localhost:8081/api/v1/admin/audit`, `GET http://localhost:8081/api/v1/admin/outbox/summary`.

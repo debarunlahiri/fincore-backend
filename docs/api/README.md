@@ -49,8 +49,22 @@ export ADMIN_TOKEN="<accessToken of the admin user>"
 | Customer / admin | JWT access token from `POST /api/v1/auth/login` (valid 15 minutes) | `Authorization: Bearer <accessToken>` |
 | Another service | shared key, only on `/internal/**` | `X-Internal-Key: <INTERNAL_API_KEY>` |
 
-Roles: `CUSTOMER` (customer endpoints) and `ADMIN` (admin endpoints). The two do not overlap: an admin token is
-rejected on customer endpoints with `403`, and a customer token is rejected on admin endpoints with `403`.
+Roles: `CUSTOMER` for customer endpoints and three staff roles for the admin endpoints. Customer and staff do not
+overlap: a staff token is rejected on customer endpoints with `403`, and a customer token is rejected on admin
+endpoints with `403`. `ADMIN` is the superuser; `OPERATIONS` changes state; `COMPLIANCE` is read-only oversight.
+
+| Admin endpoint | ADMIN | OPERATIONS | COMPLIANCE |
+| --- | :---: | :---: | :---: |
+| `POST/GET /api/v1/admin/staff` (create / list staff) | yes | no | no |
+| `POST /api/v1/admin/accounts/{id}/freeze` and `/unfreeze` | yes | yes | no |
+| `POST /api/v1/admin/standing-instructions/run` | yes | yes | no |
+| `POST /api/v1/admin/outbox/{id}/replay` | yes | yes | no |
+| `GET /api/v1/admin/outbox/summary` and `/failed` | yes | yes | yes |
+| `GET /api/v1/admin/reconciliation` | yes | no | yes |
+| `GET /api/v1/admin/audit` | yes | no | yes |
+
+A role without access gets `403 FORBIDDEN`. Staff users are created by an `ADMIN` with
+[`POST /api/v1/admin/staff`](auth-service.md#5-create-a-staff-user-admin).
 The default admin is `admin` / `ChangeMe!123` (override with `ADMIN_PASSWORD`).
 
 Get an admin token:
@@ -132,9 +146,10 @@ fields but no `code`:
 | 400 | `INVALID_TARGET` | cannot transfer to a system account |
 | 400 | `INVALID_ACCOUNT_TYPE` | `SYSTEM` account requested or targeted by an admin action |
 | 400 | `INVALID_RANGE` | CSV statement date range invalid or longer than a year |
+| 400 | `INVALID_ROLE` | staff creation with the `CUSTOMER` role |
 | 400 | `INVALID_START_DATE` | standing instruction first run is in the past |
 | 401 | `UNAUTHORIZED` | login failed, or refresh token invalid / expired / reused |
-| 403 | `FORBIDDEN` | authenticated but wrong role |
+| 403 | `FORBIDDEN` | authenticated but the role is not allowed |
 | 404 | `NOT_FOUND` | resource missing, or not owned by the caller (ids cannot be probed) |
 | 404 | `PROFILE_NOT_FOUND` | customer profile not created yet (asynchronous after registration) |
 | 409 | `USERNAME_TAKEN`, `EMAIL_TAKEN` | registration conflict |

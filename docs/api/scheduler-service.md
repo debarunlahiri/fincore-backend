@@ -6,7 +6,7 @@ and executes everything due by calling banking-core's transfer path with the ide
 
 - Gateway: `http://localhost:8080/api/v1/standing-instructions...` and `/api/v1/admin/standing-instructions/run`
 - Direct: `http://localhost:8086/...`
-- Authentication: `Authorization: Bearer <access token>`. Sections 1-5 need role `CUSTOMER`; section 6 needs `ADMIN`.
+- Authentication: `Authorization: Bearer <access token>`. Sections 1-5 need role `CUSTOMER`; section 6 needs `ADMIN` or `OPERATIONS`.
 
 ```bash
 export BASE=http://localhost:8080

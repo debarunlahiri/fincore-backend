@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Operator tooling for the outbox's dead-letter state. */
 @RestController
 @RequestMapping("/api/v1/admin/outbox")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS', 'COMPLIANCE')")
 public class OutboxAdminController {
 
     private final OutboxRepository repository;
@@ -48,6 +48,7 @@ public class OutboxAdminController {
 
     /** Safe to replay: consumers deduplicate on the event id. */
     @PostMapping("/{id}/replay")
+    @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS')")
     @Transactional
     public FailedEvent replay(@PathVariable UUID id) {
         OutboxEvent e = repository.findById(id).orElseThrow(() -> FincoreException.notFound("Outbox event not found"));
