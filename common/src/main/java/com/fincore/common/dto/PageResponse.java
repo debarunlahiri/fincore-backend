@@ -5,7 +5,8 @@ import java.util.function.Function;
 import org.springframework.data.domain.Page;
 
 /** Stable JSON shape for paged results (avoids serialising Spring's PageImpl directly). */
-public record PageResponse<T>(List<T> content, int page, int size, long totalElements, int totalPages) {
+public record PageResponse<T>(
+        List<T> content, int page, int size, long totalElements, int totalPages) {
 
     public static <E, T> PageResponse<T> of(Page<E> page, Function<E, T> mapper) {
         return new PageResponse<>(

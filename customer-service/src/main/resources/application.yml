@@ -1,6 +1,20 @@
 server:
   port: 8082
   shutdown: graceful
+  # request limits: bound what one connection or one request can cost
+  max-http-request-header-size: 16KB
+  tomcat:
+    connection-timeout: 5s
+    max-http-form-post-size: 64KB
+    max-swallow-size: 1MB
+    max-connections: 4000
+    accept-count: 200
+    threads:
+      max: 200
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
 
 spring:
   application:
@@ -31,6 +45,12 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
 
 management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
   endpoints:
     web:
       exposure:
@@ -52,3 +72,8 @@ fincore:
     batch-size: 50
     max-attempts: 5
     poll-interval-ms: 1000
+
+logging:
+  level:
+    # an unreachable trace collector must not flood the log with stack traces
+    io.opentelemetry.exporter: OFF

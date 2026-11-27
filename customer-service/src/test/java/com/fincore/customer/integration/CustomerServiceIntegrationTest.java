@@ -33,7 +33,9 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
     @Autowired UserRegisteredHandler handler;
     @Autowired CustomerRepository customers;
     @Autowired CustomerService customerService;
-    @Value("${fincore.internal.api-key}") String internalKey;
+
+    @Value("${fincore.internal.api-key}")
+    String internalKey;
 
     private UUID provision(String fullName) {
         UUID userId = UUID.randomUUID();
@@ -60,7 +62,8 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
         assertThat(handler.handle(eventId, payload)).isTrue();
         assertThat(handler.handle(eventId, payload)).isFalse();
 
-        assertThat(customers.findAll().stream().filter(c -> c.getUserId().equals(userId))).hasSize(1);
+        assertThat(customers.findAll().stream().filter(c -> c.getUserId().equals(userId)))
+                .hasSize(1);
     }
 
     @Test
@@ -70,7 +73,8 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
         handler.handle(UUID.randomUUID(), registeredEvent(userId, "Carol", "1990-01-01"));
         handler.handle(UUID.randomUUID(), registeredEvent(userId, "Carol Again", "1990-01-01"));
 
-        assertThat(customers.findAll().stream().filter(c -> c.getUserId().equals(userId))).hasSize(1);
+        assertThat(customers.findAll().stream().filter(c -> c.getUserId().equals(userId)))
+                .hasSize(1);
         assertThat(customers.findByUserId(userId).orElseThrow().getFullName()).isEqualTo("Carol");
     }
 
@@ -81,15 +85,21 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
         String payload = registeredEvent(userId, "Dave", "1990-01-01");
         var pool = Executors.newFixedThreadPool(6);
         try {
-            var futures = IntStream.range(0, 6)
-                    .mapToObj(i -> pool.submit((Callable<Boolean>) () -> {
-                        try {
-                            return handler.handle(eventId, payload);
-                        } catch (RuntimeException e) {
-                            return false;
-                        }
-                    }))
-                    .toList();
+            var futures =
+                    IntStream.range(0, 6)
+                            .mapToObj(
+                                    i ->
+                                            pool.submit(
+                                                    (Callable<Boolean>)
+                                                            () -> {
+                                                                try {
+                                                                    return handler.handle(
+                                                                            eventId, payload);
+                                                                } catch (RuntimeException e) {
+                                                                    return false;
+                                                                }
+                                                            }))
+                            .toList();
             long created = 0;
             for (var f : futures) {
                 if (f.get()) {
@@ -100,16 +110,25 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
         } finally {
             pool.shutdownNow();
         }
-        assertThat(customers.findAll().stream().filter(c -> c.getUserId().equals(userId))).hasSize(1);
+        assertThat(customers.findAll().stream().filter(c -> c.getUserId().equals(userId)))
+                .hasSize(1);
     }
 
     @Test
     void malformedOrIncompleteEventsThrowSoTheyCanBeRetriedAndDeadLettered() {
         assertThatThrownBy(() -> handler.handle(UUID.randomUUID(), "{not json"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> handler.handle(UUID.randomUUID(), "{\"userId\":\"" + UUID.randomUUID() + "\"}"))
+        assertThatThrownBy(
+                        () ->
+                                handler.handle(
+                                        UUID.randomUUID(),
+                                        "{\"userId\":\"" + UUID.randomUUID() + "\"}"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> handler.handle(UUID.randomUUID(), registeredEvent(UUID.randomUUID(), "X", "not-a-date")))
+        assertThatThrownBy(
+                        () ->
+                                handler.handle(
+                                        UUID.randomUUID(),
+                                        registeredEvent(UUID.randomUUID(), "X", "not-a-date")))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -122,17 +141,28 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Eve"))
                 .andExpect(jsonPath("$.kycStatus").value("PENDING"));
-        mvc.perform(put("/api/v1/customers/me")
-                        .header(HttpHeaders.AUTHORIZATION, auth)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "Eve New", "phone", "+919999999999"))))
+        mvc.perform(
+                        put("/api/v1/customers/me")
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        objectMapper.writeValueAsString(
+                                                Map.of(
+                                                        "fullName",
+                                                        "Eve New",
+                                                        "phone",
+                                                        "+919999999999"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Eve New"));
     }
 
     @Test
     void profileBeforeTheEventIsProcessedIs404WithAClearCode() throws Exception {
-        mvc.perform(get("/api/v1/customers/me").header(HttpHeaders.AUTHORIZATION, token(UUID.randomUUID(), Role.CUSTOMER)))
+        mvc.perform(
+                        get("/api/v1/customers/me")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        token(UUID.randomUUID(), Role.CUSTOMER)))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("PROFILE_NOT_FOUND"));
     }
@@ -141,10 +171,13 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
     void invalidProfileUpdateIsRejected() throws Exception {
         UUID userId = provision("Frank");
 
-        mvc.perform(put("/api/v1/customers/me")
-                        .header(HttpHeaders.AUTHORIZATION, token(userId, Role.CUSTOMER))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("fullName", "", "phone", "abc"))))
+        mvc.perform(
+                        put("/api/v1/customers/me")
+                                .header(HttpHeaders.AUTHORIZATION, token(userId, Role.CUSTOMER))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        objectMapper.writeValueAsString(
+                                                Map.of("fullName", "", "phone", "abc"))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors.phone").exists());
     }
@@ -153,18 +186,22 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
     void kycVerifiesWellFormedDocumentsAndCannotBeRepeatedOnceVerified() throws Exception {
         UUID userId = provision("Grace");
         String auth = token(userId, Role.CUSTOMER);
-        String kyc = objectMapper.writeValueAsString(Map.of("documentType", "PAN", "documentNumber", "ABCDE1234F"));
+        String kyc =
+                objectMapper.writeValueAsString(
+                        Map.of("documentType", "PAN", "documentNumber", "ABCDE1234F"));
 
-        mvc.perform(post("/api/v1/customers/me/kyc")
-                        .header(HttpHeaders.AUTHORIZATION, auth)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(kyc))
+        mvc.perform(
+                        post("/api/v1/customers/me/kyc")
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(kyc))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.kycStatus").value("VERIFIED"));
-        mvc.perform(post("/api/v1/customers/me/kyc")
-                        .header(HttpHeaders.AUTHORIZATION, auth)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(kyc))
+        mvc.perform(
+                        post("/api/v1/customers/me/kyc")
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(kyc))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("KYC_ALREADY_VERIFIED"));
     }
@@ -174,21 +211,39 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
         UUID userId = provision("Heidi");
         String auth = token(userId, Role.CUSTOMER);
 
-        mvc.perform(post("/api/v1/customers/me/kyc")
-                        .header(HttpHeaders.AUTHORIZATION, auth)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("documentType", "PAN", "documentNumber", "000999111"))))
+        mvc.perform(
+                        post("/api/v1/customers/me/kyc")
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        objectMapper.writeValueAsString(
+                                                Map.of(
+                                                        "documentType",
+                                                        "PAN",
+                                                        "documentNumber",
+                                                        "000999111"))))
                 .andExpect(jsonPath("$.kycStatus").value("REJECTED"));
-        mvc.perform(post("/api/v1/customers/me/kyc")
-                        .header(HttpHeaders.AUTHORIZATION, auth)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("documentType", "PAN", "documentNumber", "ABCDE1234F"))))
+        mvc.perform(
+                        post("/api/v1/customers/me/kyc")
+                                .header(HttpHeaders.AUTHORIZATION, auth)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        objectMapper.writeValueAsString(
+                                                Map.of(
+                                                        "documentType",
+                                                        "PAN",
+                                                        "documentNumber",
+                                                        "ABCDE1234F"))))
                 .andExpect(jsonPath("$.kycStatus").value("VERIFIED"));
     }
 
     @Test
     void adminCannotUseTheCustomerSelfServiceApi() throws Exception {
-        mvc.perform(get("/api/v1/customers/me").header(HttpHeaders.AUTHORIZATION, token(UUID.randomUUID(), Role.ADMIN)))
+        mvc.perform(
+                        get("/api/v1/customers/me")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        token(UUID.randomUUID(), Role.ADMIN)))
                 .andExpect(status().isForbidden());
     }
 
@@ -196,12 +251,19 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
     void internalLookupRequiresTheInternalKeyAndReturnsKycStatus() throws Exception {
         UUID userId = provision("Ivan");
 
-        mvc.perform(get("/internal/customers/by-user/" + userId)).andExpect(status().isUnauthorized());
-        mvc.perform(get("/internal/customers/by-user/" + userId).header(InternalApiKeyFilter.HEADER, "wrong"))
+        mvc.perform(get("/internal/customers/by-user/" + userId))
                 .andExpect(status().isUnauthorized());
-        mvc.perform(get("/internal/customers/by-user/" + userId).header(HttpHeaders.AUTHORIZATION, token(userId, Role.CUSTOMER)))
+        mvc.perform(
+                        get("/internal/customers/by-user/" + userId)
+                                .header(InternalApiKeyFilter.HEADER, "wrong"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(
+                        get("/internal/customers/by-user/" + userId)
+                                .header(HttpHeaders.AUTHORIZATION, token(userId, Role.CUSTOMER)))
                 .andExpect(status().isForbidden());
-        mvc.perform(get("/internal/customers/by-user/" + userId).header(InternalApiKeyFilter.HEADER, internalKey))
+        mvc.perform(
+                        get("/internal/customers/by-user/" + userId)
+                                .header(InternalApiKeyFilter.HEADER, internalKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(userId.toString()))
                 .andExpect(jsonPath("$.kycStatus").value("PENDING"))
@@ -210,7 +272,9 @@ public class CustomerServiceIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void internalLookupOfUnknownUserIs404() throws Exception {
-        mvc.perform(get("/internal/customers/by-user/" + UUID.randomUUID()).header(InternalApiKeyFilter.HEADER, internalKey))
+        mvc.perform(
+                        get("/internal/customers/by-user/" + UUID.randomUUID())
+                                .header(InternalApiKeyFilter.HEADER, internalKey))
                 .andExpect(status().isNotFound());
     }
 

@@ -22,7 +22,8 @@ public final class EventHeaders {
     private static String required(ConsumerRecord<?, ?> record, String name) {
         Header header = record.headers().lastHeader(name);
         if (header == null) {
-            // a record without our headers is poison: retries then DLT, instead of being silently dropped
+            // a record without our headers is poison: retries then DLT, instead of being silently
+            // dropped
             throw new IllegalArgumentException("Missing Kafka header '" + name + "'");
         }
         return new String(header.value(), StandardCharsets.UTF_8);

@@ -5,10 +5,22 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record AuditResponse(
-        UUID id, String actor, String action, String entityType, String entityId, String details, Instant createdAt) {
+        UUID id,
+        String actor,
+        String action,
+        String entityType,
+        String entityId,
+        String details,
+        Instant createdAt) {
 
     public static AuditResponse from(AuditEntry e) {
         return new AuditResponse(
-                e.getId(), e.getActor(), e.getAction(), e.getEntityType(), e.getEntityId(), e.getDetails(), e.getCreatedAt());
+                e.getId(),
+                e.getActor(),
+                e.getAction(),
+                e.getEntityType(),
+                e.getEntityId(),
+                e.getDetails(),
+                e.getCreatedAt());
     }
 }

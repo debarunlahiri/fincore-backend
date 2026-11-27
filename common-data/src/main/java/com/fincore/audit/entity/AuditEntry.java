@@ -41,11 +41,13 @@ public class AuditEntry {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
-    public AuditEntry(String actor, String action, String entityType, String entityId, String details) {
+    public AuditEntry(
+            String actor, String action, String entityType, String entityId, String details) {
         this.actor = actor;
         this.action = action;
         this.entityType = entityType;
         this.entityId = entityId;
-        this.details = details == null ? null : details.substring(0, Math.min(details.length(), 500));
+        this.details =
+                details == null ? null : details.substring(0, Math.min(details.length(), 500));
     }
 }

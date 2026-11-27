@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-/** Thin Kafka adapters; the transactional, idempotent logic lives in {@link NotificationService}. */
+/**
+ * Thin Kafka adapters; the transactional, idempotent logic lives in {@link NotificationService}.
+ */
 @Component
 @ConditionalOnProperty(name = "fincore.kafka.enabled", havingValue = "true")
 public class NotificationListener {
@@ -27,6 +29,7 @@ public class NotificationListener {
 
     @KafkaListener(topics = "fincore.payment-events", groupId = NotificationService.CONSUMER_NAME)
     public void onPaymentEvent(ConsumerRecord<String, String> record) {
-        service.handlePaymentEvent(EventHeaders.eventId(record), EventHeaders.eventType(record), record.value());
+        service.handlePaymentEvent(
+                EventHeaders.eventId(record), EventHeaders.eventType(record), record.value());
     }
 }

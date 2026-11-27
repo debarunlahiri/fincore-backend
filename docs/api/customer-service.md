@@ -3,12 +3,12 @@
 Customer profile and simulated KYC. The profile is created automatically from the `UserRegistered` event published by
 the auth-service; there is no "create profile" endpoint.
 
-- Gateway: `http://localhost:8080/api/v1/customers/...`
+- Gateway: `http://localhost:9780/api/v1/customers/...`
 - Direct: `http://localhost:8082/api/v1/customers/...`
 - Authentication: `Authorization: Bearer <customer access token>`. Role `CUSTOMER` only (a staff token gets `403`).
 
 ```bash
-export BASE=http://localhost:8080
+export BASE=http://localhost:9780
 export TOKEN="<accessToken>"
 ```
 
@@ -58,7 +58,7 @@ Errors common to all endpoints:
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/customers/me` |
+| Method / URL | `GET http://localhost:9780/api/v1/customers/me` |
 | Direct URL | `GET http://localhost:8082/api/v1/customers/me` |
 
 **Headers**
@@ -97,7 +97,7 @@ X-Request-Id: 4e2a7c90-3d1b-4b6a-8f5e-0a9c8d7b6e51
 
 | | |
 | --- | --- |
-| Method / URL | `PUT http://localhost:8080/api/v1/customers/me` |
+| Method / URL | `PUT http://localhost:9780/api/v1/customers/me` |
 | Direct URL | `PUT http://localhost:8082/api/v1/customers/me` |
 
 **Headers**
@@ -170,7 +170,7 @@ before an account can be opened.
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/customers/me/kyc` |
+| Method / URL | `POST http://localhost:9780/api/v1/customers/me/kyc` |
 | Direct URL | `POST http://localhost:8082/api/v1/customers/me/kyc` |
 
 **Headers**

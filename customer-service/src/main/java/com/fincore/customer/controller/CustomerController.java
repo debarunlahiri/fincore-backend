@@ -33,13 +33,16 @@ public class CustomerController {
 
     @PutMapping
     public CustomerResponse update(
-            @AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody UpdateProfileRequest req) {
-        return CustomerResponse.from(customerService.updateProfile(user.userId(), req.fullName(), req.phone()));
+            @AuthenticationPrincipal AuthenticatedUser user,
+            @Valid @RequestBody UpdateProfileRequest req) {
+        return CustomerResponse.from(
+                customerService.updateProfile(user.userId(), req.fullName(), req.phone()));
     }
 
     @PostMapping("/kyc")
     public CustomerResponse submitKyc(
             @AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody KycRequest req) {
-        return CustomerResponse.from(customerService.submitKyc(user.userId(), req.documentType(), req.documentNumber()));
+        return CustomerResponse.from(
+                customerService.submitKyc(user.userId(), req.documentType(), req.documentNumber()));
     }
 }

@@ -12,9 +12,10 @@ public class SimulatedKycProvider implements KycProvider {
 
     @Override
     public KycStatus verify(String documentType, String documentNumber) {
-        boolean ok = documentNumber != null
-                && FORMAT.matcher(documentNumber).matches()
-                && !documentNumber.startsWith("000");
+        boolean ok =
+                documentNumber != null
+                        && FORMAT.matcher(documentNumber).matches()
+                        && !documentNumber.startsWith("000");
         return ok ? KycStatus.VERIFIED : KycStatus.REJECTED;
     }
 }

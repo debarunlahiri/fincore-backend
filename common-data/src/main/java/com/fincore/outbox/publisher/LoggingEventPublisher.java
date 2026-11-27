@@ -5,7 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/** Default adapter until Kafka arrives in Phase 2. Replace by providing another EventPublisher bean + @Primary. */
+/**
+ * Default adapter until Kafka arrives in Phase 2. Replace by providing another EventPublisher bean
+ * + @Primary.
+ */
 @Component
 public class LoggingEventPublisher implements EventPublisher {
 
@@ -13,7 +16,12 @@ public class LoggingEventPublisher implements EventPublisher {
 
     @Override
     public void publish(OutboxEvent event) {
-        log.info("EVENT {} id={} aggregate={}:{} payload={}",
-                event.getEventType(), event.getId(), event.getAggregateType(), event.getAggregateId(), event.getPayload());
+        log.info(
+                "EVENT {} id={} aggregate={}:{} payload={}",
+                event.getEventType(),
+                event.getId(),
+                event.getAggregateType(),
+                event.getAggregateId(),
+                event.getPayload());
     }
 }

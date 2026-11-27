@@ -12,9 +12,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.http.HttpStatus;
 
 /**
- * In-memory banking-core with the same contract the scheduler relies on: ownership/number lookups, and a
- * transfer that is idempotent on the key (a repeat is reported as {@code replayed}). It can be switched down or
- * told to reject, to exercise the scheduler's failure handling deterministically.
+ * In-memory banking-core with the same contract the scheduler relies on: ownership/number lookups,
+ * and a transfer that is idempotent on the key (a repeat is reported as {@code replayed}). It can
+ * be switched down or told to reject, to exercise the scheduler's failure handling
+ * deterministically.
  */
 public class FakeCore implements CorePort {
 
@@ -77,6 +78,16 @@ public class FakeCore implements CorePort {
     }
 
     @Override
+    public UUID resolveOwnedAccount(UUID userId, String accountNumber) {
+        checkUp();
+        UUID id = accountNumbers.get(accountNumber);
+        if (id == null || !userId.equals(accountOwners.get(id))) {
+            throw FincoreException.notFound("Account not found");
+        }
+        return id;
+    }
+
+    @Override
     public UUID accountIdByNumber(String accountNumber) {
         checkUp();
         UUID id = accountNumbers.get(accountNumber);
@@ -90,7 +101,7 @@ public class FakeCore implements CorePort {
     public synchronized TransferOutcome transfer(
             UUID userId,
             String idempotencyKey,
-            UUID sourceAccountId,
+            String sourceAccountNumber,
             String targetAccountNumber,
             BigDecimal amount,
             String currency,
@@ -98,12 +109,20 @@ public class FakeCore implements CorePort {
         checkUp();
         attemptedKeys.add(idempotencyKey);
         if (rejectCode != null) {
-            throw new FincoreException(HttpStatus.UNPROCESSABLE_ENTITY, rejectCode, "rejected by banking-core");
+            throw new FincoreException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, rejectCode, "rejected by banking-core");
         }
         if (executed.containsKey(idempotencyKey)) {
             return new TransferOutcome(true);
         }
-        executed.put(idempotencyKey, new Call(userId, idempotencyKey, sourceAccountId, targetAccountNumber, amount));
+        executed.put(
+                idempotencyKey,
+                new Call(
+                        userId,
+                        idempotencyKey,
+                        accountNumbers.get(sourceAccountNumber),
+                        targetAccountNumber,
+                        amount));
         return new TransferOutcome(false);
     }
 

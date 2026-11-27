@@ -16,15 +16,18 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByInitiatedByAndIdempotencyKey(UUID initiatedBy, String idempotencyKey);
 
-    Optional<Payment> findByIdAndInitiatedBy(UUID id, UUID initiatedBy);
+    Optional<Payment> findByReferenceAndInitiatedBy(String reference, UUID initiatedBy);
 
-    /** Row lock so that state changes by the request thread and the recovery job cannot interleave. */
+    /**
+     * Row lock so that state changes by the request thread and the recovery job cannot interleave.
+     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Payment p where p.id = :id")
     Optional<Payment> lockById(@Param("id") UUID id);
 
     /** Payments still in flight (REQUESTED or DEBITED) for longer than the cutoff. */
-    @Query("""
+    @Query(
+            """
             select p from Payment p
             where p.status in (com.fincore.payment.entity.PaymentStatus.REQUESTED, com.fincore.payment.entity.PaymentStatus.DEBITED)
               and p.createdAt < :cutoff

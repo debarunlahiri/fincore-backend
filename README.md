@@ -1,5 +1,9 @@
 # FinCore Banking Platform (microservices)
 
+Customers get a proper banking flow: OTP-confirmed payees and transfers, receipts and history by reference number,
+fixed deposits, loans, debit cards, lockout and one active device per user (see
+[docs/api/banking-features.md](docs/api/banking-features.md)). Customers never see internal ids.
+
 Java 21, Spring Boot 3.4, Spring Cloud Gateway, PostgreSQL (database per service), Kafka, Redis, Resilience4j,
 Flyway, Testcontainers. All banking rails, KYC and money are simulated.
 
@@ -23,7 +27,7 @@ Flyway, Testcontainers. All banking rails, KYC and money are simulated.
 
 | Module | Port | Owns (own database) | Notes |
 | --- | --- | --- | --- |
-| `api-gateway` | 8080 | none | Spring Cloud Gateway (reactive) |
+| `api-gateway` | 9780 | none | Spring Cloud Gateway (reactive) |
 | `auth-service` | 8081 | users, refresh tokens | issues JWTs; emits `UserRegistered` |
 | `customer-service` | 8082 | customers, KYC | creates profiles from `UserRegistered` |
 | `banking-core` | 8083 | accounts, ledger, transfers | the consistency boundary |
@@ -67,7 +71,8 @@ fincore-backend/
 └── Dockerfile  docker-compose.yml
 ```
 
-Every service is layered the same way, one package per responsibility under its own base package:
+Every service is layered the same way, one package per responsibility under its own base package
+(`com.fincore.auth`, `customer`, `core` for banking-core, `payment`, `notification`, `scheduler`, `gateway`):
 
 ```
 customer-service/src/main/java/com/fincore/
@@ -89,27 +94,82 @@ customer-service/src/main/java/com/fincore/
 | `client` | banking-core, payment, scheduler | adapters to other services (`CustomerClient`, `LedgerClient`/`LedgerPort`, `CoreClient`/`CorePort`) |
 | `event` | auth, payment, banking-core | outbox event payloads |
 | `listener` | customer, notification | Kafka consumers |
-| `job` | payment, scheduler | scheduled jobs (recovery, daily run) |
-| `rule` | banking-core (`fraud`) | strategy implementations |
-| `model` | banking-core (`ledger`) | domain value objects (`Posting`) |
+| `job` | payment, scheduler, banking-core | scheduled jobs; each is a thin `@Scheduled` adapter over a service method (recovery, daily run, deposit maturity, loan overdue) |
+| `rule` | banking-core | fraud rule strategy implementations |
+| `model` | banking-core | domain value objects (`Posting`) |
 | `bank` | payment | the simulated external bank |
 | `filter`, `limiter` | api-gateway | gateway filters and the Redis rate limiter |
 
+banking-core is large, so it has many classes per layer, but it follows the same layout (`com.fincore.core.controller`,
+`service`, `repository`, `entity`, `dto`, `client`, `config`, `event`, `job`, `model`, `rule`), not feature folders.
+One record per file in `dto`, named for what it is (`LoanApplyRequest`, `LoanResponse`, `OtpProof`).
+
 Dependencies point one way: `controller → service → repository → entity`, with `dto` used at the edges. Tests mirror
-the main packages; `*IntegrationTest` classes live in an `integration` package and extend each module's
-`AbstractIntegrationTest`.
+the main packages (`DepositCalculatorTest` sits in `core.service`, next to `DepositCalculator`); `*IntegrationTest`
+classes live in an `integration` package and extend each module's `AbstractIntegrationTest`.
 
 ## Run
 
+Prerequisites: Docker (running). For the IDE route you also need JDK 21 and Maven 3.9+. Maven must actually run on
+JDK 21: on a machine whose default JDK is 23+, `JAVA_HOME` is not enough if `mvn` ignores it (check `mvn -v`),
+because Lombok annotation processing is off by default on newer JDKs and the build fails with missing getters.
+
+**1. Everything in Docker (simplest, builds with JDK 21 inside the image)**
+
 ```bash
-docker compose up --build            # everything (postgres, kafka, redis + 7 services)
-# or only the infrastructure, services from your IDE / `mvn -pl <module> spring-boot:run`:
-docker compose up -d postgres kafka redis
+scripts/up.sh        # frees the backend ports, then runs `docker compose up -d --build`
 ```
 
-Gateway: http://localhost:8080. Dev admin: `admin` / `ChangeMe!123` (override `ADMIN_PASSWORD`). Set `JWT_SECRET`
-(Base64, 32+ bytes) and `INTERNAL_API_KEY` outside local development. Set `KAFKA_ENABLED=false` to run a service
-without a broker (events are then only logged). Swagger UI is on each service (`/swagger-ui.html`).
+First start downloads images and builds 7 services, so allow several minutes. Wait until `docker compose ps` shows
+the services healthy, then check:
+
+```bash
+curl http://localhost:9781/actuator/health
+```
+
+**2. Infrastructure in Docker, services from your IDE or Maven**
+
+```bash
+docker compose up -d postgres kafka redis
+mvn -pl auth-service -am spring-boot:run      # repeat per module, each in its own terminal
+```
+
+Start `auth-service`, `customer-service`, `banking-core`, `payment-service`, `notification-service`,
+`scheduler-service` and finally `api-gateway`. Set `KAFKA_ENABLED=false` to run a service without a broker.
+
+**3. Front end**
+
+```bash
+cd ../fincore-web && npm install && npm run dev      # http://localhost:3000, proxies /api to the gateway
+```
+
+**Stop:** `docker compose down` (add `-v` to also wipe the databases). All Docker commands (logs, rebuild a single
+service, psql, Kafka topics, cleanup, troubleshooting): **[docs/DOCKER.md](docs/DOCKER.md)**.
+
+| What | URL |
+| --- | --- |
+| Gateway (use this) | http://localhost:9780 |
+| Swagger UI per service | http://localhost:8081 to 8086 `/swagger-ui.html` |
+| Jaeger traces | http://localhost:16686 |
+
+Dev admin: `admin` / `ChangeMe!123` (override `ADMIN_PASSWORD`). Set `JWT_SECRET` (Base64, 32+ bytes) and
+`INTERNAL_API_KEY` outside local development.
+
+## Code style
+
+Java is formatted by Spotless with google-java-format (AOSP style, 4 spaces, 100 columns, imports sorted, unused
+imports removed). `.mvn/jvm.config` holds the JVM flags the formatter needs on JDK 17+.
+
+```bash
+mvn spotless:apply     # format everything
+mvn spotless:check     # fail if anything is unformatted (for CI)
+```
+
+## Security
+
+Rate limiting (on by default), request guards, security headers, lockout, OTPs, network isolation and a production
+secrets check are described in **[docs/SECURITY.md](docs/SECURITY.md)**. Only the gateway (`9780`) is published to the
+network; the gateway's health and metrics are on `9781` (localhost only).
 
 ## API documentation
 
@@ -119,6 +179,7 @@ error bodies: **[docs/api/README.md](docs/api/README.md)**.
 | Service | Document |
 | --- | --- |
 | auth-service | [docs/api/auth-service.md](docs/api/auth-service.md) |
+| payees, OTP, deposits, loans, cards, security | [docs/api/banking-features.md](docs/api/banking-features.md) |
 | customer-service | [docs/api/customer-service.md](docs/api/customer-service.md) |
 | banking-core | [docs/api/banking-core.md](docs/api/banking-core.md) |
 | payment-service | [docs/api/payment-service.md](docs/api/payment-service.md) |

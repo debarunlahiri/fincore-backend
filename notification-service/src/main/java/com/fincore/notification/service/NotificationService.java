@@ -13,10 +13,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Turns domain events from other services into (simulated) customer notifications. Every handler is an
- * idempotent consumer: the dedup marker and the notifications are written in one transaction, so a redelivered
- * message is skipped, and a crash mid-way means it is processed again instead of being lost. A malformed payload
- * throws, which sends the record through the retries and finally to the dead-letter topic.
+ * Turns domain events from other services into (simulated) customer notifications. Every handler is
+ * an idempotent consumer: the dedup marker and the notifications are written in one transaction, so
+ * a redelivered message is skipped, and a crash mid-way means it is processed again instead of
+ * being lost. A malformed payload throws, which sends the record through the retries and finally to
+ * the dead-letter topic.
  */
 @Service
 public class NotificationService {
@@ -29,7 +30,10 @@ public class NotificationService {
     private final ProcessedEvents processedEvents;
     private final ObjectMapper objectMapper;
 
-    public NotificationService(NotificationRepository notifications, ProcessedEvents processedEvents, ObjectMapper objectMapper) {
+    public NotificationService(
+            NotificationRepository notifications,
+            ProcessedEvents processedEvents,
+            ObjectMapper objectMapper) {
         this.notifications = notifications;
         this.processedEvents = processedEvents;
         this.objectMapper = objectMapper;
@@ -61,12 +65,22 @@ public class NotificationService {
         UUID account = UUID.fromString(required(json, "accountId"));
         String amount = required(json, "amount") + " " + required(json, "currency");
         String rail = required(json, "rail");
-        String message = switch (eventType) {
-            case "PaymentSettled" -> rail + " payment of " + amount + " completed";
-            case "PaymentRefunded" -> rail + " payment of " + amount + " failed and was refunded to your account";
-            case "PaymentFailed" -> rail + " payment of " + amount + " could not be started (no money was debited)";
-            default -> null; // PaymentInitiated and future event types: nothing to tell the customer
-        };
+        String message =
+                switch (eventType) {
+                    case "PaymentSettled" -> rail + " payment of " + amount + " completed";
+                    case "PaymentRefunded" ->
+                            rail
+                                    + " payment of "
+                                    + amount
+                                    + " failed and was refunded to your account";
+                    case "PaymentFailed" ->
+                            rail
+                                    + " payment of "
+                                    + amount
+                                    + " could not be started (no money was debited)";
+                    default -> null; // PaymentInitiated and future event types: nothing to tell the
+                        // customer
+                };
         if (message != null) {
             send(eventId, account, message);
         }

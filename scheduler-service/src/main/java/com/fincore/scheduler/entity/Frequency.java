@@ -7,7 +7,10 @@ public enum Frequency {
     WEEKLY,
     MONTHLY;
 
-    /** Next run after {@code date}. Month arithmetic clamps to month end (31 Jan + 1 month = 28/29 Feb). */
+    /**
+     * Next run after {@code date}. Month arithmetic clamps to month end (31 Jan + 1 month = 28/29
+     * Feb).
+     */
     public LocalDate next(LocalDate date) {
         return switch (this) {
             case DAILY -> date.plusDays(1);

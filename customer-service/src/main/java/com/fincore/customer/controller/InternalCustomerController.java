@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Service-to-service API. Not routed by the gateway and requires the internal key (ROLE_INTERNAL). */
+/**
+ * Service-to-service API. Not routed by the gateway and requires the internal key (ROLE_INTERNAL).
+ */
 @RestController
 @RequestMapping("/internal/customers")
 @PreAuthorize("hasRole('INTERNAL')")
@@ -25,6 +27,6 @@ public class InternalCustomerController {
     @GetMapping("/by-user/{userId}")
     public CustomerSummary byUser(@PathVariable UUID userId) {
         Customer c = customers.requireByUserId(userId);
-        return new CustomerSummary(c.getId(), c.getUserId(), c.getKycStatus());
+        return new CustomerSummary(c.getId(), c.getUserId(), c.getFullName(), c.getKycStatus());
     }
 }

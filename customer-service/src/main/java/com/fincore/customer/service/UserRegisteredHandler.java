@@ -11,8 +11,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Idempotent consumer logic for {@code UserRegistered}. The dedup marker and the profile are written in one
- * transaction; a malformed payload throws so Kafka retries it and finally parks it on the dead-letter topic.
+ * Idempotent consumer logic for {@code UserRegistered}. The dedup marker and the profile are
+ * written in one transaction; a malformed payload throws so Kafka retries it and finally parks it
+ * on the dead-letter topic.
  */
 @Service
 public class UserRegisteredHandler {
@@ -23,13 +24,16 @@ public class UserRegisteredHandler {
     private final ProcessedEvents processedEvents;
     private final ObjectMapper objectMapper;
 
-    public UserRegisteredHandler(CustomerService customers, ProcessedEvents processedEvents, ObjectMapper objectMapper) {
+    public UserRegisteredHandler(
+            CustomerService customers, ProcessedEvents processedEvents, ObjectMapper objectMapper) {
         this.customers = customers;
         this.processedEvents = processedEvents;
         this.objectMapper = objectMapper;
     }
 
-    /** @return true if a profile was created, false for a duplicate delivery */
+    /**
+     * @return true if a profile was created, false for a duplicate delivery
+     */
     @Transactional
     public boolean handle(UUID eventId, String payload) {
         if (!processedEvents.markProcessed(CONSUMER_NAME, eventId)) {

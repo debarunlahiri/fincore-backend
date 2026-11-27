@@ -15,7 +15,8 @@ public interface OutboxRepository extends JpaRepository<OutboxEvent, UUID> {
      * batch instead of blocking on, or double-publishing, the same rows.
      */
     @Query(
-            value = "select * from outbox_events where status = 'PENDING' order by created_at limit :limit for update skip locked",
+            value =
+                    "select * from outbox_events where status = 'PENDING' order by created_at limit :limit for update skip locked",
             nativeQuery = true)
     List<OutboxEvent> claimPending(@Param("limit") int limit);
 

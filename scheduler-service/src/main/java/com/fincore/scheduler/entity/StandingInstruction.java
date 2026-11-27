@@ -33,6 +33,13 @@ public class StandingInstruction {
     @Column(name = "source_account_id", nullable = false)
     private UUID sourceAccountId;
 
+    @Column(name = "source_account_number", nullable = false)
+    private String sourceAccountNumber;
+
+    /** Customer-facing number; the internal id never leaves the service. */
+    @Column(nullable = false, updatable = false, unique = true)
+    private String reference = com.fincore.common.util.Reference.next("SIN");
+
     @Column(name = "target_account_number", nullable = false)
     private String targetAccountNumber;
 
@@ -67,6 +74,7 @@ public class StandingInstruction {
     public StandingInstruction(
             UUID userId,
             UUID sourceAccountId,
+            String sourceAccountNumber,
             String targetAccountNumber,
             BigDecimal amount,
             String currency,
@@ -75,6 +83,7 @@ public class StandingInstruction {
             LocalDate firstRun) {
         this.userId = userId;
         this.sourceAccountId = sourceAccountId;
+        this.sourceAccountNumber = sourceAccountNumber;
         this.targetAccountNumber = targetAccountNumber;
         this.amount = amount;
         this.currency = currency;
@@ -83,7 +92,10 @@ public class StandingInstruction {
         this.nextRunDate = firstRun;
     }
 
-    /** The idempotency key for the run of {@code runDate}: re-running the same date can never pay twice. */
+    /**
+     * The idempotency key for the run of {@code runDate}: re-running the same date can never pay
+     * twice.
+     */
     public String idempotencyKeyFor(LocalDate runDate) {
         return "SI-" + id + "-" + runDate;
     }
@@ -114,7 +126,8 @@ public class StandingInstruction {
 
     private void requireNotCancelled() {
         if (status == InstructionStatus.CANCELLED) {
-            throw FincoreException.conflict("INSTRUCTION_CANCELLED", "A cancelled instruction cannot be changed");
+            throw FincoreException.conflict(
+                    "INSTRUCTION_CANCELLED", "A cancelled instruction cannot be changed");
         }
     }
 }

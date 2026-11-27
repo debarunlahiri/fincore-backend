@@ -19,17 +19,21 @@ import org.springframework.test.web.servlet.ResultActions;
 public class PaymentApiIntegrationTest extends AbstractIntegrationTest {
 
     private final UUID userId = UUID.randomUUID();
-    private final UUID accountId = UUID.randomUUID();
+    private final String accountNumber = "FC1000000001";
 
-    private ResultActions pay(String auth, String beneficiary, String amount, String key) throws Exception {
-        var request = post("/api/v1/payments")
-                .header(HttpHeaders.AUTHORIZATION, auth)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json(Map.of(
-                        "accountId", accountId.toString(),
-                        "rail", "UPI",
-                        "beneficiaryRef", beneficiary,
-                        "amount", amount)));
+    private ResultActions pay(String auth, String beneficiary, String amount, String key)
+            throws Exception {
+        var request =
+                post("/api/v1/payments")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                json(
+                                        Map.of(
+                                                "accountNumber", accountNumber,
+                                                "rail", "UPI",
+                                                "beneficiaryRef", beneficiary,
+                                                "amount", amount)));
         if (key != null) {
             request.header("Idempotency-Key", key);
         }
@@ -59,14 +63,18 @@ public class PaymentApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void unknownBankOutcomeReturns202AndTheStatusCanBePolled() throws Exception {
-        JsonNode body = objectMapper.readTree(pay(customer(), "TIMEOUT-account", "100.00", UUID.randomUUID().toString())
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.status").value("DEBITED"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString());
+        JsonNode body =
+                objectMapper.readTree(
+                        pay(customer(), "TIMEOUT-account", "100.00", UUID.randomUUID().toString())
+                                .andExpect(status().isAccepted())
+                                .andExpect(jsonPath("$.status").value("DEBITED"))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString());
 
-        mvc.perform(get("/api/v1/payments/" + body.get("id").asText()).header(HttpHeaders.AUTHORIZATION, customer()))
+        mvc.perform(
+                        get("/api/v1/payments/" + body.get("reference").asText())
+                                .header(HttpHeaders.AUTHORIZATION, customer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("DEBITED"));
     }
@@ -112,7 +120,17 @@ public class PaymentApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void validationErrorsAreReportedPerField() throws Exception {
-        mvcPost(customer(), Map.of("accountId", accountId.toString(), "rail", "UPI", "beneficiaryRef", "", "amount", "0"))
+        mvcPost(
+                        customer(),
+                        Map.of(
+                                "accountNumber",
+                                accountNumber,
+                                "rail",
+                                "UPI",
+                                "beneficiaryRef",
+                                "",
+                                "amount",
+                                "0"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
     }
@@ -126,28 +144,38 @@ public class PaymentApiIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void paymentsAreOnlyVisibleToTheirInitiator() throws Exception {
-        JsonNode body = objectMapper.readTree(pay(customer(), "shop@upi", "100.00", UUID.randomUUID().toString())
-                .andReturn()
-                .getResponse()
-                .getContentAsString());
+        JsonNode body =
+                objectMapper.readTree(
+                        pay(customer(), "shop@upi", "100.00", UUID.randomUUID().toString())
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString());
         String other = bearer(UUID.randomUUID(), Role.CUSTOMER);
 
-        mvc.perform(get("/api/v1/payments/" + body.get("id").asText()).header(HttpHeaders.AUTHORIZATION, other))
+        mvc.perform(
+                        get("/api/v1/payments/" + body.get("reference").asText())
+                                .header(HttpHeaders.AUTHORIZATION, other))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void authenticationAndRolesAreEnforced() throws Exception {
-        pay("Bearer garbage", "shop@upi", "100.00", UUID.randomUUID().toString()).andExpect(status().isUnauthorized());
-        pay(bearer(UUID.randomUUID(), Role.ADMIN), "shop@upi", "100.00", UUID.randomUUID().toString())
+        pay("Bearer garbage", "shop@upi", "100.00", UUID.randomUUID().toString())
+                .andExpect(status().isUnauthorized());
+        pay(
+                        bearer(UUID.randomUUID(), Role.ADMIN),
+                        "shop@upi",
+                        "100.00",
+                        UUID.randomUUID().toString())
                 .andExpect(status().isForbidden());
     }
 
     private ResultActions mvcPost(String auth, Map<String, String> body) throws Exception {
-        return mvc.perform(post("/api/v1/payments")
-                .header(HttpHeaders.AUTHORIZATION, auth)
-                .header("Idempotency-Key", UUID.randomUUID().toString())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json(body)));
+        return mvc.perform(
+                post("/api/v1/payments")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .header("Idempotency-Key", UUID.randomUUID().toString())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json(body)));
     }
 }

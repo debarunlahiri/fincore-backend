@@ -44,6 +44,40 @@ public class User {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "failed_attempts", nullable = false)
+    private int failedAttempts;
+
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
+    @Column(name = "password_changed_at")
+    private Instant passwordChangedAt;
+
+    public boolean isLocked() {
+        return lockedUntil != null && Instant.now().isBefore(lockedUntil);
+    }
+
+    /** Counts a bad password; at {@code maxAttempts} the login is locked for {@code lockFor}. */
+    public boolean recordFailedLogin(int maxAttempts, java.time.Duration lockFor) {
+        failedAttempts++;
+        if (failedAttempts >= maxAttempts) {
+            lockedUntil = Instant.now().plus(lockFor);
+            failedAttempts = 0;
+            return true;
+        }
+        return false;
+    }
+
+    public void recordSuccessfulLogin() {
+        failedAttempts = 0;
+        lockedUntil = null;
+    }
+
+    public void changePassword(String newHash) {
+        this.passwordHash = newHash;
+        this.passwordChangedAt = Instant.now();
+    }
+
     public User(String username, String email, String passwordHash, Role role) {
         this.username = username;
         this.email = email;

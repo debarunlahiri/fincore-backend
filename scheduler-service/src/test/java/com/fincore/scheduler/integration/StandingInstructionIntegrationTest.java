@@ -31,14 +31,23 @@ public class StandingInstructionIntegrationTest extends AbstractIntegrationTest 
     }
 
     private void accounts() {
-        sourceAccount = core.registerAccount(userId, "FC-SRC-" + UUID.randomUUID().toString().substring(0, 6));
+        sourceAccount =
+                core.registerAccount(
+                        userId, "FC-SRC-" + UUID.randomUUID().toString().substring(0, 6));
         targetNumber = "FC-DST-" + UUID.randomUUID().toString().substring(0, 6);
         core.registerAccount(UUID.randomUUID(), targetNumber);
     }
 
     private StandingInstruction create(String amount, Frequency frequency) {
         accounts();
-        return service.create(userId, sourceAccount, targetNumber, new BigDecimal(amount), frequency, today(), "rent");
+        return service.create(
+                userId,
+                core.numberOf(sourceAccount),
+                targetNumber,
+                new BigDecimal(amount),
+                frequency,
+                today(),
+                "rent");
     }
 
     private StandingInstruction reload(StandingInstruction si) {
@@ -79,7 +88,8 @@ public class StandingInstructionIntegrationTest extends AbstractIntegrationTest 
         service.runDue(today());
         int transfers = core.effectiveTransfers();
 
-        // simulate a second scheduler instance that read the instruction before the first one advanced it
+        // simulate a second scheduler instance that read the instruction before the first one
+        // advanced it
         StandingInstruction stale = reload(si);
         ReflectionTestUtils.setField(stale, "nextRunDate", today());
         repository.save(stale);
@@ -149,23 +159,32 @@ public class StandingInstructionIntegrationTest extends AbstractIntegrationTest 
     @Test
     void pausedAndCancelledInstructionsAreNotExecuted() {
         StandingInstruction paused = create("100", Frequency.DAILY);
-        StandingInstruction cancelled = service.create(
-                userId, sourceAccount, targetNumber, new BigDecimal("200"), Frequency.DAILY, today(), null);
-        service.pause(userId, paused.getId());
-        service.cancel(userId, cancelled.getId());
+        StandingInstruction cancelled =
+                service.create(
+                        userId,
+                        core.numberOf(sourceAccount),
+                        targetNumber,
+                        new BigDecimal("200"),
+                        Frequency.DAILY,
+                        today(),
+                        null);
+        service.pause(userId, paused.getReference());
+        service.cancel(userId, cancelled.getReference());
 
         service.runDue(today());
 
         assertThat(core.attemptedKeys())
-                .doesNotContain(paused.idempotencyKeyFor(today()), cancelled.idempotencyKeyFor(today()));
-        assertThatThrownBy(() -> service.resume(userId, cancelled.getId())).isInstanceOf(FincoreException.class);
+                .doesNotContain(
+                        paused.idempotencyKeyFor(today()), cancelled.idempotencyKeyFor(today()));
+        assertThatThrownBy(() -> service.resume(userId, cancelled.getReference()))
+                .isInstanceOf(FincoreException.class);
     }
 
     @Test
     void resumedInstructionRunsAgain() {
         StandingInstruction si = create("100", Frequency.DAILY);
-        service.pause(userId, si.getId());
-        service.resume(userId, si.getId());
+        service.pause(userId, si.getReference());
+        service.resume(userId, si.getReference());
 
         service.runDue(today());
 
@@ -177,24 +196,59 @@ public class StandingInstructionIntegrationTest extends AbstractIntegrationTest 
         accounts();
         UUID stranger = UUID.randomUUID();
 
-        assertThatThrownBy(() -> service.create(
-                        stranger, sourceAccount, targetNumber, BigDecimal.TEN, Frequency.DAILY, today(), null))
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        stranger,
+                                        core.numberOf(sourceAccount),
+                                        targetNumber,
+                                        BigDecimal.TEN,
+                                        Frequency.DAILY,
+                                        today(),
+                                        null))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("NOT_FOUND"));
-        assertThatThrownBy(() -> service.create(
-                        userId, sourceAccount, "FC-UNKNOWN", BigDecimal.TEN, Frequency.DAILY, today(), null))
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        userId,
+                                        core.numberOf(sourceAccount),
+                                        "FC-UNKNOWN",
+                                        BigDecimal.TEN,
+                                        Frequency.DAILY,
+                                        today(),
+                                        null))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("NOT_FOUND"));
-        assertThatThrownBy(() -> service.create(
-                        userId, sourceAccount, targetNumber, BigDecimal.TEN, Frequency.DAILY, today().minusDays(1), null))
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        userId,
+                                        core.numberOf(sourceAccount),
+                                        targetNumber,
+                                        BigDecimal.TEN,
+                                        Frequency.DAILY,
+                                        today().minusDays(1),
+                                        null))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("INVALID_START_DATE"));
     }
 
     @Test
     void transferringToTheSameAccountIsRejectedAtCreation() {
         UUID owner = UUID.randomUUID();
-        UUID account = core.registerAccount(owner, "FC-SELF-" + UUID.randomUUID().toString().substring(0, 6));
+        UUID account =
+                core.registerAccount(
+                        owner, "FC-SELF-" + UUID.randomUUID().toString().substring(0, 6));
         String ownNumber = core.numberOf(account);
 
-        assertThatThrownBy(() -> service.create(owner, account, ownNumber, BigDecimal.TEN, Frequency.DAILY, today(), null))
+        assertThatThrownBy(
+                        () ->
+                                service.create(
+                                        owner,
+                                        ownNumber,
+                                        ownNumber,
+                                        BigDecimal.TEN,
+                                        Frequency.DAILY,
+                                        today(),
+                                        null))
                 .satisfies(e -> assertThat(code(e)).isEqualTo("SAME_ACCOUNT"));
     }
 
@@ -203,8 +257,11 @@ public class StandingInstructionIntegrationTest extends AbstractIntegrationTest 
         StandingInstruction si = create("100", Frequency.DAILY);
         UUID other = UUID.randomUUID();
 
-        assertThat(service.list(userId)).extracting(StandingInstruction::getId).contains(si.getId());
+        assertThat(service.list(userId))
+                .extracting(StandingInstruction::getId)
+                .contains(si.getId());
         assertThat(service.list(other)).isEmpty();
-        assertThatThrownBy(() -> service.pause(other, si.getId())).isInstanceOf(FincoreException.class);
+        assertThatThrownBy(() -> service.pause(other, si.getReference()))
+                .isInstanceOf(FincoreException.class);
     }
 }

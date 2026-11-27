@@ -10,5 +10,6 @@ import jakarta.validation.constraints.Size;
 public record CreateStaffRequest(
         @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "^[A-Za-z0-9._-]+$") String username,
         @NotBlank @Email String email,
-        @NotBlank @Size(min = 8, max = 72) String password,
+        @NotBlank @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
+                String password,
         @NotNull Role role) {}

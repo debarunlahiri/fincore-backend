@@ -8,7 +8,9 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
-/** Creates the first ADMIN user from configuration. Supply ADMIN_PASSWORD outside local development. */
+/**
+ * Creates the first ADMIN user from configuration. Supply ADMIN_PASSWORD outside local development.
+ */
 @Component
 public class AdminBootstrap implements ApplicationRunner {
 

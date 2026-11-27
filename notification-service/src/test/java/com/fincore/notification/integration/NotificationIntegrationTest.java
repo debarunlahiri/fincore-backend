@@ -17,7 +17,9 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/** The idempotent consumer against a real database: the dedup guarantee is a primary-key constraint. */
+/**
+ * The idempotent consumer against a real database: the dedup guarantee is a primary-key constraint.
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 public class NotificationIntegrationTest {
@@ -41,7 +43,8 @@ public class NotificationIntegrationTest {
     private static String transfer(UUID source, UUID target) {
         return """
                 {"transferId":"%s","sourceAccountId":"%s","targetAccountId":"%s","amount":100.00,"currency":"INR"}
-                """.formatted(UUID.randomUUID(), source, target);
+                """
+                .formatted(UUID.randomUUID(), source, target);
     }
 
     @Test
@@ -73,10 +76,11 @@ public class NotificationIntegrationTest {
         try {
             List<Callable<Void>> tasks = new ArrayList<>();
             for (int i = 0; i < 6; i++) {
-                tasks.add(() -> {
-                    service.handleTransferCompleted(eventId, payload);
-                    return null;
-                });
+                tasks.add(
+                        () -> {
+                            service.handleTransferCompleted(eventId, payload);
+                            return null;
+                        });
             }
             for (var future : pool.invokeAll(tasks)) {
                 future.get();
@@ -93,9 +97,11 @@ public class NotificationIntegrationTest {
         UUID eventId = UUID.randomUUID();
 
         try {
-            service.handleTransferCompleted(eventId, "{\"sourceAccountId\":\"" + UUID.randomUUID() + "\"}");
+            service.handleTransferCompleted(
+                    eventId, "{\"sourceAccountId\":\"" + UUID.randomUUID() + "\"}");
         } catch (IllegalArgumentException expected) {
-            // incomplete payload: processing fails after the marker insert, the whole transaction rolls back
+            // incomplete payload: processing fails after the marker insert, the whole transaction
+            // rolls back
         }
         service.handleTransferCompleted(eventId, transfer(UUID.randomUUID(), UUID.randomUUID()));
 
@@ -105,9 +111,11 @@ public class NotificationIntegrationTest {
     @Test
     void paymentEventsAreDeduplicatedToo() {
         UUID eventId = UUID.randomUUID();
-        String payload = """
+        String payload =
+                """
                 {"paymentId":"%s","accountId":"%s","rail":"IMPS","amount":10.00,"currency":"INR"}
-                """.formatted(UUID.randomUUID(), UUID.randomUUID());
+                """
+                        .formatted(UUID.randomUUID(), UUID.randomUUID());
 
         service.handlePaymentEvent(eventId, "PaymentSettled", payload);
         service.handlePaymentEvent(eventId, "PaymentSettled", payload);

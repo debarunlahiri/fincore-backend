@@ -4,12 +4,12 @@ Simulated UPI, IMPS and NEFT payments to an external bank, run as a distributed 
 banking-core, the simulated bank is called, and the payment is then settled or the debit is reversed. The state is
 persisted so interrupted payments are finished by a recovery job.
 
-- Gateway: `http://localhost:8080/api/v1/payments...`
+- Gateway: `http://localhost:9780/api/v1/payments...`
 - Direct: `http://localhost:8084/api/v1/payments...`
 - Authentication: `Authorization: Bearer <customer access token>`. Role `CUSTOMER` only.
 
 ```bash
-export BASE=http://localhost:8080
+export BASE=http://localhost:9780
 export TOKEN="<customer accessToken>"
 export ACCOUNT_ID="3f2b8c1e-5a47-4d1b-9c3e-1a2b3c4d5e6f"
 ```
@@ -55,7 +55,7 @@ Payment response:
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/payments` |
+| Method / URL | `POST http://localhost:9780/api/v1/payments` |
 | Direct URL | `POST http://localhost:8084/api/v1/payments` |
 
 **Headers**
@@ -239,7 +239,7 @@ Use this to follow a payment that returned `202`.
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/payments/{paymentId}` |
+| Method / URL | `GET http://localhost:9780/api/v1/payments/{paymentId}` |
 | Direct URL | `GET http://localhost:8084/api/v1/payments/{paymentId}` |
 
 Only the user who created the payment can read it.

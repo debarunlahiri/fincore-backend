@@ -66,7 +66,10 @@ public class OutboxEvent {
         this.lastError = null;
     }
 
-    /** Operator action: put a dead-lettered (FAILED) event back in the queue with a fresh retry budget. */
+    /**
+     * Operator action: put a dead-lettered (FAILED) event back in the queue with a fresh retry
+     * budget.
+     */
     public void resetForReplay() {
         this.status = OutboxStatus.PENDING;
         this.attempts = 0;

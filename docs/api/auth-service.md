@@ -2,13 +2,13 @@
 
 Registration, login, token refresh and logout. Issues the JWT access token that every other service verifies.
 
-- Gateway: `http://localhost:8080/api/v1/auth/...`
+- Gateway: `http://localhost:9780/api/v1/auth/...`
 - Direct: `http://localhost:8081/api/v1/auth/...`
 - Authentication: none (public endpoints). Rate limited at the gateway: 10 requests/minute per client address when Redis
   limiting is on.
 
 ```bash
-export BASE=http://localhost:8080
+export BASE=http://localhost:9780
 ```
 
 Token response (used by register, login and refresh):
@@ -31,7 +31,7 @@ customer-service, so `GET /api/v1/customers/me` may return `404 PROFILE_NOT_FOUN
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/auth/register` |
+| Method / URL | `POST http://localhost:9780/api/v1/auth/register` |
 | Direct URL | `POST http://localhost:8081/api/v1/auth/register` |
 | Auth | none |
 
@@ -126,7 +126,7 @@ X-Request-Id: 8c5f2f0e-3b8d-4a49-9d57-0b6f3c1e5a77
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/auth/login` |
+| Method / URL | `POST http://localhost:9780/api/v1/auth/login` |
 | Direct URL | `POST http://localhost:8081/api/v1/auth/login` |
 | Auth | none |
 
@@ -193,7 +193,7 @@ Presenting an already-used (revoked) refresh token is treated as theft: **all** 
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/auth/refresh` |
+| Method / URL | `POST http://localhost:9780/api/v1/auth/refresh` |
 | Direct URL | `POST http://localhost:8081/api/v1/auth/refresh` |
 | Auth | none |
 
@@ -257,7 +257,7 @@ Revokes the given refresh token. The access token stays valid until it expires (
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/auth/logout` |
+| Method / URL | `POST http://localhost:9780/api/v1/auth/logout` |
 | Direct URL | `POST http://localhost:8081/api/v1/auth/logout` |
 | Auth | none |
 
@@ -297,7 +297,7 @@ written to the audit log as `STAFF_CREATED`.
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/admin/staff` |
+| Method / URL | `POST http://localhost:9780/api/v1/admin/staff` |
 | Direct URL | `POST http://localhost:8081/api/v1/admin/staff` |
 | Auth | `Authorization: Bearer <ADMIN access token>` |
 
@@ -346,7 +346,7 @@ The new user logs in with the normal `POST /api/v1/auth/login` and receives a to
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/admin/staff` |
+| Method / URL | `GET http://localhost:9780/api/v1/admin/staff` |
 | Direct URL | `GET http://localhost:8081/api/v1/admin/staff` |
 | Auth | `Authorization: Bearer <ADMIN access token>` |
 

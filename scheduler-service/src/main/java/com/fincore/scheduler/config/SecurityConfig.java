@@ -15,7 +15,9 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(
-            HttpSecurity http, JwtService jwtService, @Value("${fincore.internal.api-key}") String internalKey)
+            HttpSecurity http,
+            JwtService jwtService,
+            @Value("${fincore.internal.api-key}") String internalKey)
             throws Exception {
         return CommonSecurity.statelessApi(http, jwtService, internalKey, a -> {}).build();
     }

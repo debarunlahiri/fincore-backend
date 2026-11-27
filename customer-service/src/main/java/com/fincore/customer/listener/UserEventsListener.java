@@ -7,7 +7,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-/** Thin Kafka adapter; the transactional, idempotent logic lives in {@link UserRegisteredHandler}. */
+/**
+ * Thin Kafka adapter; the transactional, idempotent logic lives in {@link UserRegisteredHandler}.
+ */
 @Component
 @ConditionalOnProperty(name = "fincore.kafka.enabled", havingValue = "true")
 public class UserEventsListener {

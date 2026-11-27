@@ -14,11 +14,13 @@ import org.springframework.util.backoff.FixedBackOff;
 public class KafkaErrorHandlingConfig {
 
     /**
-     * A poison message is retried 3 times (1s apart), then parked on "&lt;topic&gt;.DLT" so one bad record cannot
-     * block the partition. Boot wires a CommonErrorHandler bean into the listener container factory.
+     * A poison message is retried 3 times (1s apart), then parked on "&lt;topic&gt;.DLT" so one bad
+     * record cannot block the partition. Boot wires a CommonErrorHandler bean into the listener
+     * container factory.
      */
     @Bean
     CommonErrorHandler kafkaErrorHandler(KafkaOperations<Object, Object> template) {
-        return new DefaultErrorHandler(new DeadLetterPublishingRecoverer(template), new FixedBackOff(1000L, 3));
+        return new DefaultErrorHandler(
+                new DeadLetterPublishingRecoverer(template), new FixedBackOff(1000L, 3));
     }
 }

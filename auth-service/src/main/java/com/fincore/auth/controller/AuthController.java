@@ -26,13 +26,30 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public TokenResponse register(@Valid @RequestBody RegisterRequest r) {
-        return TokenResponse.from(authService.register(new AuthService.RegistrationData(
-                r.username(), r.email(), r.password(), r.fullName(), r.phone(), r.dateOfBirth())));
+        return TokenResponse.from(
+                authService.register(
+                        new AuthService.RegistrationData(
+                                r.username(),
+                                r.email(),
+                                r.password(),
+                                r.fullName(),
+                                r.phone(),
+                                r.dateOfBirth())));
     }
 
     @PostMapping("/login")
-    public TokenResponse login(@Valid @RequestBody LoginRequest r) {
-        return TokenResponse.from(authService.login(r.username(), r.password()));
+    public TokenResponse login(
+            @Valid @RequestBody LoginRequest r, jakarta.servlet.http.HttpServletRequest http) {
+        String forwarded = http.getHeader("X-Forwarded-For");
+        String ip =
+                forwarded != null && !forwarded.isBlank()
+                        ? forwarded.split(",")[0].trim()
+                        : http.getRemoteAddr();
+        return TokenResponse.from(
+                authService.login(
+                        r.username(),
+                        r.password(),
+                        new AuthService.ClientInfo(ip, http.getHeader("User-Agent"))));
     }
 
     @PostMapping("/refresh")

@@ -25,34 +25,53 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(FincoreException.class)
     ResponseEntity<ProblemDetail> handleBusiness(FincoreException ex) {
-        return ResponseEntity.status(ex.status()).body(problem(ex.status(), ex.code(), ex.getMessage()));
+        return ResponseEntity.status(ex.status())
+                .body(problem(ex.status(), ex.code(), ex.getMessage()));
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     ResponseEntity<ProblemDetail> handleOptimisticLock(OptimisticLockingFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(problem(HttpStatus.CONFLICT, "CONCURRENT_UPDATE", "The resource was modified concurrently, please retry"));
+                .body(
+                        problem(
+                                HttpStatus.CONFLICT,
+                                "CONCURRENT_UPDATE",
+                                "The resource was modified concurrently, please retry"));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ProblemDetail> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(problem(HttpStatus.FORBIDDEN, "FORBIDDEN", "You are not allowed to perform this action"));
+                .body(
+                        problem(
+                                HttpStatus.FORBIDDEN,
+                                "FORBIDDEN",
+                                "You are not allowed to perform this action"));
     }
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<ProblemDetail> handleUnexpected(Exception ex) {
         log.error("Unhandled exception", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(problem(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "Unexpected error"));
+                .body(
+                        problem(
+                                HttpStatus.INTERNAL_SERVER_ERROR,
+                                "INTERNAL_ERROR",
+                                "Unexpected error"));
     }
 
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+            MethodArgumentNotValidException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
         Map<String, String> errors = new LinkedHashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(e -> errors.putIfAbsent(e.getField(), e.getDefaultMessage()));
-        ProblemDetail pd = problem(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Request validation failed");
+        ex.getBindingResult()
+                .getFieldErrors()
+                .forEach(e -> errors.putIfAbsent(e.getField(), e.getDefaultMessage()));
+        ProblemDetail pd =
+                problem(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED", "Request validation failed");
         pd.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(pd);
     }

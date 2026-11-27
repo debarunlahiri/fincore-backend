@@ -23,7 +23,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** The Saga against a real database and the simulated bank, with banking-core replaced by {@code FakeLedger}. */
+/**
+ * The Saga against a real database and the simulated bank, with banking-core replaced by {@code
+ * FakeLedger}.
+ */
 public class PaymentSagaIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired PaymentService paymentService;
@@ -34,10 +37,14 @@ public class PaymentSagaIntegrationTest extends AbstractIntegrationTest {
     @Autowired JdbcTemplate jdbc;
 
     private final UUID userId = UUID.randomUUID();
-    private final UUID accountId = UUID.randomUUID();
+    private final String accountNumber =
+            "FC" + (1_000_000_000L + (long) (Math.random() * 1_000_000));
+    private final UUID accountId =
+            UUID.nameUUIDFromBytes(accountNumber.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
     private PaymentService.Outcome pay(String beneficiary, String amount, String key) {
-        return paymentService.pay(userId, key, accountId, Rail.UPI, beneficiary, new BigDecimal(amount));
+        return paymentService.pay(
+                userId, key, accountNumber, Rail.UPI, beneficiary, new BigDecimal(amount));
     }
 
     private PaymentService.Outcome pay(String beneficiary) {
@@ -50,7 +57,9 @@ public class PaymentSagaIntegrationTest extends AbstractIntegrationTest {
 
     private List<String> eventTypes(Payment p) {
         return jdbc.queryForList(
-                "select event_type from outbox_events where aggregate_id = ? order by created_at", String.class, p.getId());
+                "select event_type from outbox_events where aggregate_id = ? order by created_at",
+                String.class,
+                p.getId());
     }
 
     private static String code(Throwable t) {
@@ -91,7 +100,8 @@ public class PaymentSagaIntegrationTest extends AbstractIntegrationTest {
         Payment p = reload(outcome.payment());
         assertThat(p.getStatus()).isEqualTo(PaymentStatus.FAILED);
         assertThat(p.getFailureReason()).isEqualTo("INSUFFICIENT_FUNDS");
-        assertThat(gateway.status(p.getId().toString())).isEqualTo(ExternalBankGateway.Status.UNKNOWN);
+        assertThat(gateway.status(p.getId().toString()))
+                .isEqualTo(ExternalBankGateway.Status.UNKNOWN);
         assertThat(ledger.effectiveReversals()).isZero();
         assertThat(eventTypes(p)).containsExactly("PaymentFailed");
     }
@@ -117,7 +127,8 @@ public class PaymentSagaIntegrationTest extends AbstractIntegrationTest {
         var outcome = pay("shop@upi");
 
         assertThat(reload(outcome.payment()).getStatus()).isEqualTo(PaymentStatus.REQUESTED);
-        assertThat(gateway.status(outcome.payment().getId().toString())).isEqualTo(ExternalBankGateway.Status.UNKNOWN);
+        assertThat(gateway.status(outcome.payment().getId().toString()))
+                .isEqualTo(ExternalBankGateway.Status.UNKNOWN);
 
         ledger.setDown(false);
         recoveryJob.recoverStuckPayments();
@@ -130,7 +141,16 @@ public class PaymentSagaIntegrationTest extends AbstractIntegrationTest {
     void ledgerOutageDuringCompensationKeepsThePaymentDebitedAndRecoveryRefundsLater() {
         var outcome = pay("shop@upi");
         // simulate: debited, bank said no, but banking-core is unreachable when we try to reverse
-        Payment p = steps.create(userId, "k-" + UUID.randomUUID(), accountId, Rail.UPI, "FAIL-x", new BigDecimal("50"), "h");
+        Payment p =
+                steps.create(
+                        userId,
+                        "k-" + UUID.randomUUID(),
+                        accountId,
+                        accountNumber,
+                        Rail.UPI,
+                        "FAIL-x",
+                        new BigDecimal("50"),
+                        "h");
         ledger.debit(p.getId(), userId, accountId, new BigDecimal("50"), "x");
         steps.markDebited(p.getId(), UUID.randomUUID());
         ledger.setDown(true);
@@ -149,15 +169,26 @@ public class PaymentSagaIntegrationTest extends AbstractIntegrationTest {
     @Test
     void paymentDebitedButNeverSubmittedToTheBankIsSubmittedByRecovery() {
         // a crash between "markDebited" and the bank call leaves exactly this state
-        Payment p = steps.create(userId, "k-" + UUID.randomUUID(), accountId, Rail.IMPS, "shop@upi", new BigDecimal("75"), "h");
+        Payment p =
+                steps.create(
+                        userId,
+                        "k-" + UUID.randomUUID(),
+                        accountId,
+                        accountNumber,
+                        Rail.IMPS,
+                        "shop@upi",
+                        new BigDecimal("75"),
+                        "h");
         var posted = ledger.debit(p.getId(), userId, accountId, new BigDecimal("75"), "x");
         steps.markDebited(p.getId(), posted.journalId());
-        assertThat(gateway.status(p.getId().toString())).isEqualTo(ExternalBankGateway.Status.UNKNOWN);
+        assertThat(gateway.status(p.getId().toString()))
+                .isEqualTo(ExternalBankGateway.Status.UNKNOWN);
 
         recoveryJob.recoverStuckPayments();
 
         assertThat(reload(p).getStatus()).isEqualTo(PaymentStatus.SETTLED);
-        assertThat(gateway.status(p.getId().toString())).isEqualTo(ExternalBankGateway.Status.SUCCESS);
+        assertThat(gateway.status(p.getId().toString()))
+                .isEqualTo(ExternalBankGateway.Status.SUCCESS);
     }
 
     @Test

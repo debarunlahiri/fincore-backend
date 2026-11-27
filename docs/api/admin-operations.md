@@ -17,7 +17,7 @@ needs `ADMIN` or `OPERATIONS`; the audit log needs `ADMIN` or `COMPLIANCE`. Full
 | payment-service | 8084 | yes | `PaymentInitiated` / `Settled` / `Refunded` / `Failed` events; `PAYMENT_REFUNDED` audit |
 | notification-service | 8085 | yes | (outbox unused); audit |
 | scheduler-service | 8086 | no | |
-| api-gateway | 8080 | no | |
+| api-gateway | 9780 | no | |
 
 ```bash
 export ADMIN_TOKEN="<admin accessToken>"
@@ -258,7 +258,7 @@ Content-Type: application/vnd.spring-boot.actuator.v3+json
 {"status":"UP"}
 ```
 
-Through the gateway, `http://localhost:8080/actuator/health` reports the gateway itself.
+Through the gateway, `http://localhost:9781/actuator/health` reports the gateway itself.
 
 Metrics example:
 

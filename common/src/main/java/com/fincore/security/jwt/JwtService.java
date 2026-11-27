@@ -17,9 +17,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
- * Issues (auth-service only) and verifies (every service) HS256 access tokens. All services share the signing
- * secret through configuration; a production setup would use asymmetric keys (RS256/JWKS) so that only the
- * auth-service can sign.
+ * Issues (auth-service only) and verifies (every service) HS256 access tokens. All services share
+ * the signing secret through configuration; a production setup would use asymmetric keys
+ * (RS256/JWKS) so that only the auth-service can sign.
  */
 @Service
 public class JwtService {
@@ -53,11 +53,13 @@ public class JwtService {
     /** Returns empty for any malformed, tampered or expired token. */
     public Optional<AuthenticatedUser> parse(String token) {
         try {
-            Claims claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
-            return Optional.of(new AuthenticatedUser(
-                    UUID.fromString(claims.getSubject()),
-                    claims.get("username", String.class),
-                    Role.valueOf(claims.get("role", String.class))));
+            Claims claims =
+                    Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            return Optional.of(
+                    new AuthenticatedUser(
+                            UUID.fromString(claims.getSubject()),
+                            claims.get("username", String.class),
+                            Role.valueOf(claims.get("role", String.class))));
         } catch (JwtException | IllegalArgumentException e) {
             return Optional.empty();
         }

@@ -12,3 +12,10 @@ fincore:
   outbox:
     # tests call OutboxRelay.relayBatch() explicitly instead of waiting for the scheduler
     poll-interval-ms: 3600000
+  transfer:
+    # the existing API tests move money between fresh accounts without saved payees or OTPs
+    require-beneficiary: false
+    otp-threshold: 1000000000
+    per-transaction-limit: 1000000000
+  beneficiary:
+    cooling-period: PT0S

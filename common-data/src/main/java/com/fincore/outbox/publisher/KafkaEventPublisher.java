@@ -12,9 +12,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Publishes outbox events to Kafka. The record key is the aggregate id, so every event of one transfer or
- * account lands in the same partition and keeps its order. We block for the broker ack: if it never comes,
- * we throw and the relay leaves the event PENDING to retry (at-least-once).
+ * Publishes outbox events to Kafka. The record key is the aggregate id, so every event of one
+ * transfer or account lands in the same partition and keeps its order. We block for the broker ack:
+ * if it never comes, we throw and the relay leaves the event PENDING to retry (at-least-once).
  */
 @Component
 @Primary
@@ -36,10 +36,15 @@ public class KafkaEventPublisher implements EventPublisher {
 
     @Override
     public void publish(OutboxEvent event) {
-        var record = new ProducerRecord<>(
-                topicFor(event.getAggregateType()), event.getAggregateId().toString(), event.getPayload());
-        record.headers().add(EVENT_ID_HEADER, event.getId().toString().getBytes(StandardCharsets.UTF_8));
-        record.headers().add(EVENT_TYPE_HEADER, event.getEventType().getBytes(StandardCharsets.UTF_8));
+        var record =
+                new ProducerRecord<>(
+                        topicFor(event.getAggregateType()),
+                        event.getAggregateId().toString(),
+                        event.getPayload());
+        record.headers()
+                .add(EVENT_ID_HEADER, event.getId().toString().getBytes(StandardCharsets.UTF_8));
+        record.headers()
+                .add(EVENT_TYPE_HEADER, event.getEventType().getBytes(StandardCharsets.UTF_8));
         try {
             kafka.send(record).get(10, TimeUnit.SECONDS);
         } catch (InterruptedException e) {

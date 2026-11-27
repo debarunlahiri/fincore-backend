@@ -23,7 +23,7 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/path: /actuator/prometheus
-        prometheus.io/port: "8080"
+        prometheus.io/port: "9781"
     spec:
       securityContext:
         runAsNonRoot: true
@@ -33,7 +33,7 @@ spec:
           image: fincore/api-gatewayatest
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8080
+            - containerPort: 9780
           envFrom:
             - configMapRef:
                 name: fincore-config
@@ -50,14 +50,14 @@ spec:
           livenessProbe:
             httpGet:
               path: /actuator/health/liveness
-              port: 8080
+              port: 9781
             initialDelaySeconds: 40
             periodSeconds: 10
             failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /actuator/health/readiness
-              port: 8080
+              port: 9781
             initialDelaySeconds: 20
             periodSeconds: 5
             failureThreshold: 3
@@ -85,4 +85,4 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8080
+      targetPort: 9780

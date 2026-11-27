@@ -9,8 +9,8 @@ package com.fincore.payment.entity;
  *     +--debit rejected--> FAILED        +--bank declines / never processed--> REFUNDED (after a reversal posting)
  * </pre>
  *
- * SETTLED, REFUNDED and FAILED are terminal. REQUESTED and DEBITED are the "in flight" states the recovery job
- * keeps pushing forward.
+ * SETTLED, REFUNDED and FAILED are terminal. REQUESTED and DEBITED are the "in flight" states the
+ * recovery job keeps pushing forward.
  */
 public enum PaymentStatus {
     REQUESTED,

@@ -9,14 +9,19 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
-/** The service exposes only actuator endpoints and the admin outbox/audit APIs; it is otherwise a pure consumer. */
+/**
+ * The service exposes only actuator endpoints and the admin outbox/audit APIs; it is otherwise a
+ * pure consumer.
+ */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(
-            HttpSecurity http, JwtService jwtService, @Value("${fincore.internal.api-key}") String internalKey)
+            HttpSecurity http,
+            JwtService jwtService,
+            @Value("${fincore.internal.api-key}") String internalKey)
             throws Exception {
         return CommonSecurity.statelessApi(http, jwtService, internalKey, a -> {}).build();
     }

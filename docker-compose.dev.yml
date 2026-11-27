@@ -1,0 +1,55 @@
+# Hot-reload development stack. Use it ON TOP of the normal file (needs Docker Compose 2.24+ for `!reset`):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Instead of building 7 images, each service runs `mvn spring-boot:run` with Spring DevTools against your source
+# folder (bind-mounted). A "builder" container watches the sources: when you save a file it recompiles that
+# module and the matching service restarts in a few seconds. Change shared code (common, common-data) and all
+# services reload. Maven's cache lives in the `m2` volume, so only the first start is slow.
+
+x-dev: &dev
+  image: maven:3.9-eclipse-temurin-21
+  build: !reset null
+  working_dir: /workspace
+  volumes:
+    - .:/workspace
+    - m2:/root/.m2
+  environment:
+    SPRING_DEVTOOLS_RESTART_TRIGGER_FILE: .reloadtrigger
+    SPRING_DEVTOOLS_RESTART_POLL_INTERVAL: 1s
+    SPRING_DEVTOOLS_RESTART_QUIET_PERIOD: 500ms
+    SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "false"
+
+services:
+  builder:
+    image: maven:3.9-eclipse-temurin-21
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - m2:/root/.m2
+    command: ["bash", "scripts/dev-build.sh"]
+
+  api-gateway:
+    <<: *dev
+    command: ["bash", "scripts/dev-service.sh", "api-gateway"]
+  auth-service:
+    <<: *dev
+    command: ["bash", "scripts/dev-service.sh", "auth-service"]
+  customer-service:
+    <<: *dev
+    command: ["bash", "scripts/dev-service.sh", "customer-service"]
+  banking-core:
+    <<: *dev
+    command: ["bash", "scripts/dev-service.sh", "banking-core"]
+  payment-service:
+    <<: *dev
+    command: ["bash", "scripts/dev-service.sh", "payment-service"]
+  notification-service:
+    <<: *dev
+    command: ["bash", "scripts/dev-service.sh", "notification-service"]
+  scheduler-service:
+    <<: *dev
+    command: ["bash", "scripts/dev-service.sh", "scheduler-service"]
+
+volumes:
+  m2:

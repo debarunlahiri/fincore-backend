@@ -17,7 +17,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-/** One shared PostgreSQL container per JVM so Spring reuses a single application context across test classes. */
+/**
+ * One shared PostgreSQL container per JVM so Spring reuses a single application context across test
+ * classes.
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 @AutoConfigureMockMvc
@@ -52,26 +55,43 @@ public abstract class AbstractIntegrationTest {
     }
 
     protected JsonNode registerViaApi(String username) throws Exception {
-        var request = Map.of(
-                "username", username,
-                "email", username + "@test.local",
-                "password", "Passw0rd!23",
-                "fullName", "Test " + username,
-                "phone", "9876543210",
-                "dateOfBirth", "1990-01-01");
-        return body(mvc.perform(post("/api/v1/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(request)))
-                .andExpect(status().isCreated())
-                .andReturn());
+        var request =
+                Map.of(
+                        "username",
+                        username,
+                        "email",
+                        username + "@test.local",
+                        "password",
+                        "Passw0rd!23",
+                        "fullName",
+                        "Test " + username,
+                        "phone",
+                        "9876543210",
+                        "dateOfBirth",
+                        "1990-01-01");
+        return body(
+                mvc.perform(
+                                post("/api/v1/auth/register")
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(json(request)))
+                        .andExpect(status().isCreated())
+                        .andReturn());
     }
 
     protected JsonNode loginViaApi(String username, String password) throws Exception {
-        return body(mvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json(Map.of("username", username, "password", password))))
-                .andExpect(status().isOk())
-                .andReturn());
+        return body(
+                mvc.perform(
+                                post("/api/v1/auth/login")
+                                        .contentType(MediaType.APPLICATION_JSON)
+                                        .content(
+                                                json(
+                                                        Map.of(
+                                                                "username",
+                                                                username,
+                                                                "password",
+                                                                password))))
+                        .andExpect(status().isOk())
+                        .andReturn());
     }
 
     protected JsonNode adminTokens() throws Exception {

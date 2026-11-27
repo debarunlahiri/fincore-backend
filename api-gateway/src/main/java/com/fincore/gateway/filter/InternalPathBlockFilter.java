@@ -9,8 +9,9 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 /**
- * Defence in depth: {@code /internal/**} is the service-to-service API. No route points at it, but this filter
- * also answers 404 for it explicitly, so a future wildcard route can never expose it to the internet.
+ * Defence in depth: {@code /internal/**} is the service-to-service API. No route points at it, but
+ * this filter also answers 404 for it explicitly, so a future wildcard route can never expose it to
+ * the internet.
  */
 @Component
 public class InternalPathBlockFilter implements GlobalFilter, Ordered {

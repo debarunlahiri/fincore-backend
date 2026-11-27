@@ -13,7 +13,15 @@ public class PaymentStatusTest {
 
     private static Payment payment() {
         return new Payment(
-                UUID.randomUUID(), "key", UUID.randomUUID(), Rail.UPI, "shop@upi", new BigDecimal("10"), "INR", "hash");
+                UUID.randomUUID(),
+                "key",
+                UUID.randomUUID(),
+                "FC1000000001",
+                Rail.UPI,
+                "shop@upi",
+                new BigDecimal("10"),
+                "INR",
+                "hash");
     }
 
     @Test
@@ -30,7 +38,8 @@ public class PaymentStatusTest {
 
     @Test
     void terminalStatesCannotMoveAnywhere() {
-        for (PaymentStatus terminal : EnumSet.of(PaymentStatus.SETTLED, PaymentStatus.REFUNDED, PaymentStatus.FAILED)) {
+        for (PaymentStatus terminal :
+                EnumSet.of(PaymentStatus.SETTLED, PaymentStatus.REFUNDED, PaymentStatus.FAILED)) {
             assertThat(terminal.isTerminal()).isTrue();
             for (PaymentStatus next : PaymentStatus.values()) {
                 assertThat(terminal.canTransitionTo(next)).as("%s -> %s", terminal, next).isFalse();
@@ -73,7 +82,10 @@ public class PaymentStatusTest {
 
         assertThatThrownBy(() -> settled.markRefunded("late", UUID.randomUUID()))
                 .isInstanceOf(FincoreException.class)
-                .satisfies(e -> assertThat(((FincoreException) e).code()).isEqualTo("INVALID_PAYMENT_STATE"));
+                .satisfies(
+                        e ->
+                                assertThat(((FincoreException) e).code())
+                                        .isEqualTo("INVALID_PAYMENT_STATE"));
         assertThatThrownBy(() -> payment().markSettled()).isInstanceOf(FincoreException.class);
     }
 

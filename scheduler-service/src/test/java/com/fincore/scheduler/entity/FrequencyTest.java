@@ -14,21 +14,34 @@ public class FrequencyTest {
 
     @Test
     void dailyAndWeeklyAdvanceByFixedSteps() {
-        assertThat(Frequency.DAILY.next(LocalDate.of(2026, 3, 1))).isEqualTo(LocalDate.of(2026, 3, 2));
-        assertThat(Frequency.WEEKLY.next(LocalDate.of(2026, 3, 1))).isEqualTo(LocalDate.of(2026, 3, 8));
+        assertThat(Frequency.DAILY.next(LocalDate.of(2026, 3, 1)))
+                .isEqualTo(LocalDate.of(2026, 3, 2));
+        assertThat(Frequency.WEEKLY.next(LocalDate.of(2026, 3, 1)))
+                .isEqualTo(LocalDate.of(2026, 3, 8));
     }
 
     @Test
     void monthlyClampsToTheEndOfShorterMonths() {
-        assertThat(Frequency.MONTHLY.next(LocalDate.of(2026, 1, 31))).isEqualTo(LocalDate.of(2026, 2, 28));
-        assertThat(Frequency.MONTHLY.next(LocalDate.of(2028, 1, 31))).isEqualTo(LocalDate.of(2028, 2, 29));
-        assertThat(Frequency.MONTHLY.next(LocalDate.of(2026, 12, 15))).isEqualTo(LocalDate.of(2027, 1, 15));
+        assertThat(Frequency.MONTHLY.next(LocalDate.of(2026, 1, 31)))
+                .isEqualTo(LocalDate.of(2026, 2, 28));
+        assertThat(Frequency.MONTHLY.next(LocalDate.of(2028, 1, 31)))
+                .isEqualTo(LocalDate.of(2028, 2, 29));
+        assertThat(Frequency.MONTHLY.next(LocalDate.of(2026, 12, 15)))
+                .isEqualTo(LocalDate.of(2027, 1, 15));
     }
 
     private static StandingInstruction instruction() {
-        StandingInstruction si = new StandingInstruction(
-                UUID.randomUUID(), UUID.randomUUID(), "FC1", BigDecimal.TEN, "INR", null, Frequency.DAILY,
-                LocalDate.of(2026, 3, 1));
+        StandingInstruction si =
+                new StandingInstruction(
+                        UUID.randomUUID(),
+                        UUID.randomUUID(),
+                        "FC-SRC",
+                        "FC1",
+                        BigDecimal.TEN,
+                        "INR",
+                        null,
+                        Frequency.DAILY,
+                        LocalDate.of(2026, 3, 1));
         ReflectionTestUtils.setField(si, "id", UUID.randomUUID());
         return si;
     }
@@ -37,9 +50,12 @@ public class FrequencyTest {
     void idempotencyKeyIsDeterministicPerInstructionAndDate() {
         StandingInstruction si = instruction();
 
-        assertThat(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1))).isEqualTo(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1)));
-        assertThat(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1))).isNotEqualTo(si.idempotencyKeyFor(LocalDate.of(2026, 3, 2)));
-        assertThat(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1)).length()).isLessThanOrEqualTo(100);
+        assertThat(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1)))
+                .isEqualTo(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1)));
+        assertThat(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1)))
+                .isNotEqualTo(si.idempotencyKeyFor(LocalDate.of(2026, 3, 2)));
+        assertThat(si.idempotencyKeyFor(LocalDate.of(2026, 3, 1)).length())
+                .isLessThanOrEqualTo(100);
     }
 
     @Test
@@ -69,6 +85,7 @@ public class FrequencyTest {
         si.cancel();
 
         assertThatThrownBy(si::pause).isInstanceOf(FincoreException.class);
-        assertThatThrownBy(() -> si.resume(LocalDate.of(2026, 6, 1))).isInstanceOf(FincoreException.class);
+        assertThatThrownBy(() -> si.resume(LocalDate.of(2026, 6, 1)))
+                .isInstanceOf(FincoreException.class);
     }
 }

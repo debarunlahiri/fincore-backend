@@ -23,18 +23,25 @@ public class CustomerService {
 
     @Transactional(readOnly = true)
     public Customer requireByUserId(UUID userId) {
-        return customers.findByUserId(userId)
-                .orElseThrow(() -> new FincoreException(
-                        HttpStatus.NOT_FOUND,
-                        "PROFILE_NOT_FOUND",
-                        "Customer profile not found (it is created asynchronously after registration; retry shortly)"));
+        return customers
+                .findByUserId(userId)
+                .orElseThrow(
+                        () ->
+                                new FincoreException(
+                                        HttpStatus.NOT_FOUND,
+                                        "PROFILE_NOT_FOUND",
+                                        "Customer profile not found (it is created asynchronously after registration; retry shortly)"));
     }
 
-    /** Idempotent: a redelivered or duplicated UserRegistered event never creates a second profile. */
+    /**
+     * Idempotent: a redelivered or duplicated UserRegistered event never creates a second profile.
+     */
     @Transactional
     public Customer provision(UUID userId, String fullName, String phone, LocalDate dateOfBirth) {
-        return customers.findByUserId(userId)
-                .orElseGet(() -> customers.save(new Customer(userId, fullName, phone, dateOfBirth)));
+        return customers
+                .findByUserId(userId)
+                .orElseGet(
+                        () -> customers.save(new Customer(userId, fullName, phone, dateOfBirth)));
     }
 
     @Transactional
@@ -50,7 +57,8 @@ public class CustomerService {
         if (customer.isKycVerified()) {
             throw FincoreException.conflict("KYC_ALREADY_VERIFIED", "KYC is already verified");
         }
-        customer.applyKyc(documentType, documentNumber, kycProvider.verify(documentType, documentNumber));
+        customer.applyKyc(
+                documentType, documentNumber, kycProvider.verify(documentType, documentNumber));
         return customer;
     }
 }

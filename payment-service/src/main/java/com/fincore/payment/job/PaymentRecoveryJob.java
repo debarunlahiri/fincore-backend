@@ -13,10 +13,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Finishes Sagas that were interrupted (bank timeout, banking-core outage, app crash between steps): every
- * payment still REQUESTED or DEBITED after a grace period is driven forward again. Safe on several instances:
- * every step takes a row lock and is a no-op on a payment that already moved on, and the ledger operations are
- * idempotent on the payment id.
+ * Finishes Sagas that were interrupted (bank timeout, banking-core outage, app crash between
+ * steps): every payment still REQUESTED or DEBITED after a grace period is driven forward again.
+ * Safe on several instances: every step takes a row lock and is a no-op on a payment that already
+ * moved on, and the ledger operations are idempotent on the payment id.
  */
 @Component
 public class PaymentRecoveryJob {
@@ -44,16 +44,22 @@ public class PaymentRecoveryJob {
         }
     }
 
-    /** @return number of payments that reached a terminal state during this pass */
+    /**
+     * @return number of payments that reached a terminal state during this pass
+     */
     public int recoverStuckPayments() {
         int resolved = 0;
-        for (Payment stuck : payments.findStuck(Instant.now().minus(minAge), PageRequest.of(0, 50))) {
+        for (Payment stuck :
+                payments.findStuck(Instant.now().minus(minAge), PageRequest.of(0, 50))) {
             try {
                 if (paymentService.drive(stuck, true).getStatus().isTerminal()) {
                     resolved++;
                 }
             } catch (RuntimeException e) {
-                log.warn("Recovery of payment {} failed, will retry: {}", stuck.getId(), e.toString());
+                log.warn(
+                        "Recovery of payment {} failed, will retry: {}",
+                        stuck.getId(),
+                        e.toString());
             }
         }
         return resolved;

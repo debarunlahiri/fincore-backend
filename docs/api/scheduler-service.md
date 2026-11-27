@@ -4,12 +4,12 @@ Standing instructions: recurring transfers (daily, weekly or monthly). A job run
 and executes everything due by calling banking-core's transfer path with the idempotency key
 `SI-<instructionId>-<runDate>`, so a retry or a second scheduler instance can never pay twice.
 
-- Gateway: `http://localhost:8080/api/v1/standing-instructions...` and `/api/v1/admin/standing-instructions/run`
+- Gateway: `http://localhost:9780/api/v1/standing-instructions...` and `/api/v1/admin/standing-instructions/run`
 - Direct: `http://localhost:8086/...`
 - Authentication: `Authorization: Bearer <access token>`. Sections 1-5 need role `CUSTOMER`; section 6 needs `ADMIN` or `OPERATIONS`.
 
 ```bash
-export BASE=http://localhost:8080
+export BASE=http://localhost:9780
 export TOKEN="<customer accessToken>"
 export ADMIN_TOKEN="<admin accessToken>"
 export SI_ID="1b2c3d4e-5f60-4a7b-8c9d-0e1f2a3b4c5d"
@@ -43,7 +43,7 @@ Errors common to all endpoints: `401` (empty body) without a valid token; `403 F
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/standing-instructions` |
+| Method / URL | `POST http://localhost:9780/api/v1/standing-instructions` |
 | Direct URL | `POST http://localhost:8086/api/v1/standing-instructions` |
 
 **Headers**: `Authorization: Bearer <token>` (required), `Content-Type: application/json` (required).
@@ -139,7 +139,7 @@ X-Request-Id: 6f7a8b9c-0d1e-4f2a-b14c-d5e6f7a8b9c0
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/standing-instructions` |
+| Method / URL | `GET http://localhost:9780/api/v1/standing-instructions` |
 | Direct URL | `GET http://localhost:8086/api/v1/standing-instructions` |
 
 **Headers**: `Authorization: Bearer <token>` (required).
@@ -181,7 +181,7 @@ A paused instruction is skipped by the job.
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/standing-instructions/{id}/pause` |
+| Method / URL | `POST http://localhost:9780/api/v1/standing-instructions/{id}/pause` |
 | Direct URL | `POST http://localhost:8086/api/v1/standing-instructions/{id}/pause` |
 
 **Headers**: `Authorization: Bearer <token>` (required). No body.
@@ -223,7 +223,7 @@ it is in the past.
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/standing-instructions/{id}/resume` |
+| Method / URL | `POST http://localhost:9780/api/v1/standing-instructions/{id}/resume` |
 | Direct URL | `POST http://localhost:8086/api/v1/standing-instructions/{id}/resume` |
 
 **Headers**, **errors**: as for pause.
@@ -242,7 +242,7 @@ Permanent: a cancelled instruction cannot be paused or resumed.
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/standing-instructions/{id}/cancel` |
+| Method / URL | `POST http://localhost:9780/api/v1/standing-instructions/{id}/cancel` |
 | Direct URL | `POST http://localhost:8086/api/v1/standing-instructions/{id}/cancel` |
 
 **Headers**: as for pause. **Errors**: `404 NOT_FOUND`.
@@ -264,7 +264,7 @@ before today, one run per missed day, each with its own idempotency key.
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/admin/standing-instructions/run` |
+| Method / URL | `POST http://localhost:9780/api/v1/admin/standing-instructions/run` |
 | Direct URL | `POST http://localhost:8086/api/v1/admin/standing-instructions/run` |
 
 **Headers**: `Authorization: Bearer <admin token>` (required). No body.

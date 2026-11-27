@@ -12,7 +12,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Only the SHA-256 hash of the opaque token is stored, so a database leak does not leak sessions. */
+/**
+ * Only the SHA-256 hash of the opaque token is stored, so a database leak does not leak sessions.
+ */
 @Entity
 @Table(name = "refresh_tokens")
 @Getter
@@ -37,6 +39,22 @@ public class RefreshToken {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+
+    @Column(name = "user_agent")
+    private String userAgent;
+
+    @Column(name = "ip_address")
+    private String ipAddress;
+
+    public RefreshToken(
+            UUID userId, String tokenHash, Instant expiresAt, String ipAddress, String userAgent) {
+        this(userId, tokenHash, expiresAt);
+        this.ipAddress = ipAddress;
+        this.userAgent =
+                userAgent == null
+                        ? null
+                        : userAgent.substring(0, Math.min(200, userAgent.length()));
+    }
 
     public RefreshToken(UUID userId, String tokenHash, Instant expiresAt) {
         this.userId = userId;

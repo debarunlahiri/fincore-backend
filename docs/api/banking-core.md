@@ -3,7 +3,7 @@
 Accounts, cash deposits and withdrawals, statements, transfers, reconciliation and account freeze/unfreeze. This is the
 service that owns the double-entry ledger.
 
-- Gateway: `http://localhost:8080` (paths below)
+- Gateway: `http://localhost:9780` (paths below)
 - Direct: `http://localhost:8083` (same paths)
 - Authentication: `Authorization: Bearer <access token>`.
   Sections 1-9 are **customer** endpoints (role `CUSTOMER`); sections 10-12 are **admin** endpoints: reconciliation needs `ADMIN` or `COMPLIANCE`, freeze and unfreeze need
@@ -11,7 +11,7 @@ service that owns the double-entry ledger.
   role that is not allowed returns `403 FORBIDDEN`. See the role table in [README.md](README.md#authentication).
 
 ```bash
-export BASE=http://localhost:8080
+export BASE=http://localhost:9780
 export TOKEN="<customer accessToken>"
 export ADMIN_TOKEN="<admin accessToken>"
 export ACCOUNT_ID="3f2b8c1e-5a47-4d1b-9c3e-1a2b3c4d5e6f"
@@ -69,7 +69,7 @@ Requires verified KYC (checked against the customer-service).
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/accounts` |
+| Method / URL | `POST http://localhost:9780/api/v1/accounts` |
 | Direct URL | `POST http://localhost:8083/api/v1/accounts` |
 
 **Headers**: `Authorization: Bearer <token>` (required), `Content-Type: application/json` (required).
@@ -162,7 +162,7 @@ X-Request-Id: 7a6b5c4d-3e2f-4a10-b9c8-d7e6f5a4b3c2
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/accounts` |
+| Method / URL | `GET http://localhost:9780/api/v1/accounts` |
 | Direct URL | `GET http://localhost:8083/api/v1/accounts` |
 
 **Headers**: `Authorization: Bearer <token>` (required).
@@ -212,7 +212,7 @@ X-Request-Id: 1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/accounts/{accountId}` |
+| Method / URL | `GET http://localhost:9780/api/v1/accounts/{accountId}` |
 | Direct URL | `GET http://localhost:8083/api/v1/accounts/{accountId}` |
 
 **Headers**: `Authorization: Bearer <token>` (required).
@@ -252,7 +252,7 @@ X-Request-Id: 3d4e5f6a-7b8c-4d9e-a0b1-c2d3e4f5a6b7
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/accounts/{accountId}/deposits` |
+| Method / URL | `POST http://localhost:9780/api/v1/accounts/{accountId}/deposits` |
 | Direct URL | `POST http://localhost:8083/api/v1/accounts/{accountId}/deposits` |
 
 **Headers**: `Authorization: Bearer <token>` (required), `Content-Type: application/json` (required).
@@ -333,7 +333,7 @@ X-Request-Id: 8e9f0a1b-2c3d-4e5f-a6b7-c8d9e0f1a2b3
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/accounts/{accountId}/withdrawals` |
+| Method / URL | `POST http://localhost:9780/api/v1/accounts/{accountId}/withdrawals` |
 | Direct URL | `POST http://localhost:8083/api/v1/accounts/{accountId}/withdrawals` |
 
 **Headers** and **request body**: same as deposits.
@@ -388,7 +388,7 @@ Ledger entries of the account, newest first.
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/accounts/{accountId}/statement?page=0&size=20` |
+| Method / URL | `GET http://localhost:9780/api/v1/accounts/{accountId}/statement?page=0&size=20` |
 | Direct URL | `GET http://localhost:8083/api/v1/accounts/{accountId}/statement?page=0&size=20` |
 
 **Headers**: `Authorization: Bearer <token>` (required).
@@ -456,7 +456,7 @@ X-Request-Id: 5a6b7c8d-9e0f-4a1b-82c3-d4e5f6a7b8c9
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/accounts/{accountId}/statement.csv?from=2026-11-01&to=2026-11-30` |
+| Method / URL | `GET http://localhost:9780/api/v1/accounts/{accountId}/statement.csv?from=2026-11-01&to=2026-11-30` |
 | Direct URL | `GET http://localhost:8083/api/v1/accounts/{accountId}/statement.csv?from=2026-11-01&to=2026-11-30` |
 
 **Headers**: `Authorization: Bearer <token>` (required).
@@ -521,7 +521,7 @@ Moves money atomically between two accounts: balanced DEBIT and CREDIT ledger en
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/transfers` |
+| Method / URL | `POST http://localhost:9780/api/v1/transfers` |
 | Direct URL | `POST http://localhost:8083/api/v1/transfers` |
 
 **Headers**
@@ -663,7 +663,7 @@ cause, for example after a deposit.
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/transfers/{transferId}` |
+| Method / URL | `GET http://localhost:9780/api/v1/transfers/{transferId}` |
 | Direct URL | `GET http://localhost:8083/api/v1/transfers/{transferId}` |
 
 Only the user who initiated the transfer can read it.
@@ -710,7 +710,7 @@ balances sum to zero. `consistent: false` means data corruption or a bug.
 
 | | |
 | --- | --- |
-| Method / URL | `GET http://localhost:8080/api/v1/admin/reconciliation` |
+| Method / URL | `GET http://localhost:9780/api/v1/admin/reconciliation` |
 | Direct URL | `GET http://localhost:8083/api/v1/admin/reconciliation` |
 
 **Headers**: `Authorization: Bearer <admin token>` (required).
@@ -767,7 +767,7 @@ username.
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/admin/accounts/{accountId}/freeze` |
+| Method / URL | `POST http://localhost:9780/api/v1/admin/accounts/{accountId}/freeze` |
 | Direct URL | `POST http://localhost:8083/api/v1/admin/accounts/{accountId}/freeze` |
 
 **Headers**: `Authorization: Bearer <admin token>` (required). No request body.
@@ -813,7 +813,7 @@ X-Request-Id: 1a2b3c4d-5e6f-4a7b-a8c9-d0e1f2a3b4c5
 
 | | |
 | --- | --- |
-| Method / URL | `POST http://localhost:8080/api/v1/admin/accounts/{accountId}/unfreeze` |
+| Method / URL | `POST http://localhost:9780/api/v1/admin/accounts/{accountId}/unfreeze` |
 | Direct URL | `POST http://localhost:8083/api/v1/admin/accounts/{accountId}/unfreeze` |
 
 **Headers** and errors: same as freeze.

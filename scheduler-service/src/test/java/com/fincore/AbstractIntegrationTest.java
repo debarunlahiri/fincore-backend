@@ -46,7 +46,9 @@ public abstract class AbstractIntegrationTest {
     }
 
     protected String bearer(UUID userId, Role role) {
-        return "Bearer " + jwtService.generateAccessToken(userId, "user-" + userId.toString().substring(0, 6), role);
+        return "Bearer "
+                + jwtService.generateAccessToken(
+                        userId, "user-" + userId.toString().substring(0, 6), role);
     }
 
     protected String json(Object body) throws Exception {

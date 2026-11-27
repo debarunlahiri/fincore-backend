@@ -21,18 +21,21 @@ public class NotificationServiceTest {
 
     private final NotificationRepository notifications = mock(NotificationRepository.class);
     private final ProcessedEvents processed = mock(ProcessedEvents.class);
-    private final NotificationService service = new NotificationService(notifications, processed, new ObjectMapper());
+    private final NotificationService service =
+            new NotificationService(notifications, processed, new ObjectMapper());
 
     private static String transferPayload(UUID source, UUID target) {
         return """
                 {"transferId":"%s","sourceAccountId":"%s","targetAccountId":"%s","amount":5000.00,"currency":"INR"}
-                """.formatted(UUID.randomUUID(), source, target);
+                """
+                .formatted(UUID.randomUUID(), source, target);
     }
 
     private static String paymentPayload(UUID account) {
         return """
                 {"paymentId":"%s","accountId":"%s","rail":"UPI","amount":250.00,"currency":"INR","status":"SETTLED"}
-                """.formatted(UUID.randomUUID(), account);
+                """
+                .formatted(UUID.randomUUID(), account);
     }
 
     private void firstDelivery(UUID eventId) {
@@ -50,8 +53,11 @@ public class NotificationServiceTest {
 
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notifications, times(2)).save(captor.capture());
-        assertThat(captor.getAllValues()).extracting(Notification::getAccountId).containsExactlyInAnyOrder(source, target);
-        assertThat(captor.getAllValues()).extracting(Notification::getMessage)
+        assertThat(captor.getAllValues())
+                .extracting(Notification::getAccountId)
+                .containsExactlyInAnyOrder(source, target);
+        assertThat(captor.getAllValues())
+                .extracting(Notification::getMessage)
                 .anyMatch(m -> m.startsWith("Debit alert"))
                 .anyMatch(m -> m.startsWith("Credit alert"));
     }
@@ -61,7 +67,8 @@ public class NotificationServiceTest {
         UUID eventId = UUID.randomUUID();
         when(processed.markProcessed(NotificationService.CONSUMER_NAME, eventId)).thenReturn(false);
 
-        service.handleTransferCompleted(eventId, transferPayload(UUID.randomUUID(), UUID.randomUUID()));
+        service.handleTransferCompleted(
+                eventId, transferPayload(UUID.randomUUID(), UUID.randomUUID()));
 
         verify(notifications, never()).save(any(Notification.class));
     }
@@ -86,7 +93,10 @@ public class NotificationServiceTest {
 
         ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
         verify(notifications).save(captor.capture());
-        assertThat(captor.getValue().getMessage()).contains("UPI").contains("250.00 INR").contains("completed");
+        assertThat(captor.getValue().getMessage())
+                .contains("UPI")
+                .contains("250.00 INR")
+                .contains("completed");
     }
 
     @Test

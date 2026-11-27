@@ -62,3 +62,6 @@ jacoco*.exec
 surefire-reports/
 failsafe-reports/
 .testcontainers/
+
+# hot-reload dev stack
+.dev-ready

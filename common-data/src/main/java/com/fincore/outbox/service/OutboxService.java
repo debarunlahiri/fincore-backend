@@ -20,12 +20,20 @@ public class OutboxService {
         this.objectMapper = objectMapper;
     }
 
-    /** MANDATORY: the event must be written in the same transaction as the state change it describes. */
+    /**
+     * MANDATORY: the event must be written in the same transaction as the state change it
+     * describes.
+     */
     @Transactional(propagation = Propagation.MANDATORY)
-    public OutboxEvent record(String aggregateType, UUID aggregateId, String eventType, Object payload) {
+    public OutboxEvent record(
+            String aggregateType, UUID aggregateId, String eventType, Object payload) {
         try {
             return repository.save(
-                    new OutboxEvent(aggregateType, aggregateId, eventType, objectMapper.writeValueAsString(payload)));
+                    new OutboxEvent(
+                            aggregateType,
+                            aggregateId,
+                            eventType,
+                            objectMapper.writeValueAsString(payload)));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Cannot serialise outbox payload for " + eventType, e);
         }

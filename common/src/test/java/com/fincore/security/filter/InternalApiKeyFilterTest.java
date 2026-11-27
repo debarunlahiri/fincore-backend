@@ -45,7 +45,8 @@ public class InternalApiKeyFilterTest {
         wrong.addHeader(InternalApiKeyFilter.HEADER, "nope");
         assertThat(authenticatedAfter(wrong)).isFalse();
 
-        assertThat(authenticatedAfter(new MockHttpServletRequest("GET", "/internal/accounts/1"))).isFalse();
+        assertThat(authenticatedAfter(new MockHttpServletRequest("GET", "/internal/accounts/1")))
+                .isFalse();
     }
 
     @Test

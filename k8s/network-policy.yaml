@@ -1,0 +1,44 @@
+# Zero-trust networking inside the namespace.
+# 1. Deny all inbound traffic to every pod by default.
+# 2. The api-gateway accepts traffic from anywhere (the ingress / load balancer) on its public port.
+# 3. The gateway's management port (health, metrics) is reachable only from inside the namespace.
+# 4. The other services accept traffic only from pods in this namespace, never from other namespaces or outside.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-public-to-gateway
+spec:
+  podSelector:
+    matchLabels:
+      app: api-gateway
+  policyTypes: [Ingress]
+  ingress:
+    - ports:
+        - port: 9780
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 9781
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-between-services
+spec:
+  podSelector:
+    matchLabels:
+      part-of: fincore
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              part-of: fincore

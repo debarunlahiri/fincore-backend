@@ -4,13 +4,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fincore.account.client.CustomerClient;
-import com.fincore.account.entity.Account;
-import com.fincore.account.entity.AccountType;
-import com.fincore.account.repository.AccountRepository;
-import com.fincore.account.service.AccountService;
-import com.fincore.ledger.service.CashService;
-import com.fincore.reporting.service.ReconciliationService;
+import com.fincore.core.client.CustomerClient;
+import com.fincore.core.entity.Account;
+import com.fincore.core.entity.AccountType;
+import com.fincore.core.repository.AccountRepository;
+import com.fincore.core.service.AccountService;
+import com.fincore.core.service.CashService;
+import com.fincore.core.service.ReconciliationService;
 import com.fincore.security.jwt.JwtService;
 import com.fincore.security.model.AuthenticatedUser;
 import com.fincore.security.model.Role;
@@ -36,10 +36,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Base for tests that need the real stack. One PostgreSQL container (singleton, started once per JVM) is shared
- * by every subclass, so Spring also reuses a single application context. The guarantees under test (row locks,
- * unique constraints, triggers, isolation) are database behaviour that H2 would only imitate.
- * The customer-service is the only remote dependency and is replaced by a mock that reports KYC as verified.
+ * Base for tests that need the real stack. One PostgreSQL container (singleton, started once per
+ * JVM) is shared by every subclass, so Spring also reuses a single application context. The
+ * guarantees under test (row locks, unique constraints, triggers, isolation) are database behaviour
+ * that H2 would only imitate. The customer-service is the only remote dependency and is replaced by
+ * a mock that reports KYC as verified.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -72,7 +73,13 @@ public abstract class AbstractIntegrationTest {
     @BeforeEach
     void kycIsVerifiedByDefault() {
         when(customerClient.byUser(any()))
-                .thenAnswer(inv -> new CustomerClient.CustomerSummary(UUID.randomUUID(), inv.getArgument(0), "VERIFIED"));
+                .thenAnswer(
+                        inv ->
+                                new CustomerClient.CustomerSummary(
+                                        UUID.randomUUID(),
+                                        inv.getArgument(0),
+                                        "Test Customer",
+                                        "VERIFIED"));
     }
 
     protected record TestCustomer(AuthenticatedUser user, Account account) {}
@@ -93,7 +100,9 @@ public abstract class AbstractIntegrationTest {
     }
 
     protected String bearer(UUID userId, Role role) {
-        return "Bearer " + jwtService.generateAccessToken(userId, "user-" + userId.toString().substring(0, 6), role);
+        return "Bearer "
+                + jwtService.generateAccessToken(
+                        userId, "user-" + userId.toString().substring(0, 6), role);
     }
 
     protected String bearer(TestCustomer customer) {
@@ -114,10 +123,12 @@ public abstract class AbstractIntegrationTest {
         try {
             List<Future<T>> futures = new ArrayList<>();
             for (Callable<T> task : tasks) {
-                futures.add(pool.submit(() -> {
-                    startGate.await();
-                    return task.call();
-                }));
+                futures.add(
+                        pool.submit(
+                                () -> {
+                                    startGate.await();
+                                    return task.call();
+                                }));
             }
             startGate.countDown();
             List<T> results = new ArrayList<>();

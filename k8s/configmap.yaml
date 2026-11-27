@@ -22,3 +22,5 @@ data:
   CORE_SERVICE_URL: http://banking-core
   PAYMENT_SERVICE_URL: http://payment-service
   SCHEDULER_SERVICE_URL: http://scheduler-service
+  SPRING_PROFILES_ACTIVE: "prod"
+  RATELIMIT_STORE: "redis"

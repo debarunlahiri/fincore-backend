@@ -35,6 +35,13 @@ public class Payment {
     @Column(name = "account_id", nullable = false)
     private UUID accountId;
 
+    @Column(name = "account_number", nullable = false)
+    private String accountNumber;
+
+    /** Customer-facing payment number; the internal id never leaves the service. */
+    @Column(nullable = false, updatable = false, unique = true)
+    private String reference = com.fincore.common.util.Reference.next("PAY");
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Rail rail;
@@ -74,6 +81,7 @@ public class Payment {
             UUID initiatedBy,
             String idempotencyKey,
             UUID accountId,
+            String accountNumber,
             Rail rail,
             String beneficiaryRef,
             BigDecimal amount,
@@ -82,6 +90,7 @@ public class Payment {
         this.initiatedBy = initiatedBy;
         this.idempotencyKey = idempotencyKey;
         this.accountId = accountId;
+        this.accountNumber = accountNumber;
         this.rail = rail;
         this.beneficiaryRef = beneficiaryRef;
         this.amount = amount;
@@ -111,7 +120,8 @@ public class Payment {
 
     private void transitionTo(PaymentStatus next) {
         if (!status.canTransitionTo(next)) {
-            throw FincoreException.conflict("INVALID_PAYMENT_STATE", "Cannot move payment from " + status + " to " + next);
+            throw FincoreException.conflict(
+                    "INVALID_PAYMENT_STATE", "Cannot move payment from " + status + " to " + next);
         }
         this.status = next;
         this.updatedAt = Instant.now();

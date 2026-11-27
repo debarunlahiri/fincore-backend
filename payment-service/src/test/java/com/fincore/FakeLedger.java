@@ -11,9 +11,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.http.HttpStatus;
 
 /**
- * In-memory stand-in for banking-core with the same contract: both operations are idempotent on the payment id
- * (a repeat returns {@code replayed = true} and the original journal), a reversal needs a prior debit, and the
- * whole thing can be switched "down" or told to reject, to exercise the Saga's failure paths deterministically.
+ * In-memory stand-in for banking-core with the same contract: both operations are idempotent on the
+ * payment id (a repeat returns {@code replayed = true} and the original journal), a reversal needs
+ * a prior debit, and the whole thing can be switched "down" or told to reject, to exercise the
+ * Saga's failure paths deterministically.
  */
 public class FakeLedger implements LedgerPort {
 
@@ -38,7 +39,9 @@ public class FakeLedger implements LedgerPort {
         this.down = down;
     }
 
-    /** Makes every debit fail with a definitive 422 carrying this code (e.g. INSUFFICIENT_FUNDS). */
+    /**
+     * Makes every debit fail with a definitive 422 carrying this code (e.g. INSUFFICIENT_FUNDS).
+     */
     public void rejectDebitsWith(String code) {
         this.rejectCode = code;
     }
@@ -60,13 +63,15 @@ public class FakeLedger implements LedgerPort {
     }
 
     @Override
-    public synchronized Posted debit(UUID paymentId, UUID userId, UUID accountId, BigDecimal amount, String description) {
+    public synchronized Posted debit(
+            UUID paymentId, UUID userId, UUID accountId, BigDecimal amount, String description) {
         debitCalls.incrementAndGet();
         if (down) {
             throw new DependencyUnavailableException("banking-core is down");
         }
         if (rejectCode != null) {
-            throw new FincoreException(HttpStatus.UNPROCESSABLE_ENTITY, rejectCode, "rejected by ledger");
+            throw new FincoreException(
+                    HttpStatus.UNPROCESSABLE_ENTITY, rejectCode, "rejected by ledger");
         }
         Posted existing = debits.get(paymentId);
         if (existing != null) {
@@ -75,6 +80,16 @@ public class FakeLedger implements LedgerPort {
         Posted created = new Posted(UUID.randomUUID(), false);
         debits.put(paymentId, created);
         return created;
+    }
+
+    /** Same contract as banking-core: the account number maps to a stable internal id. */
+    @Override
+    public UUID resolveAccount(UUID userId, String accountNumber) {
+        if (down) {
+            throw new DependencyUnavailableException("banking-core is down");
+        }
+        return UUID.nameUUIDFromBytes(
+                accountNumber.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     @Override

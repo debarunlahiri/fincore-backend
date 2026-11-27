@@ -30,8 +30,12 @@ public class StaffAdminController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public StaffResponse create(@AuthenticationPrincipal AuthenticatedUser admin, @Valid @RequestBody CreateStaffRequest r) {
-        return StaffResponse.from(authService.createStaff(admin.username(), r.username(), r.email(), r.password(), r.role()));
+    public StaffResponse create(
+            @AuthenticationPrincipal AuthenticatedUser admin,
+            @Valid @RequestBody CreateStaffRequest r) {
+        return StaffResponse.from(
+                authService.createStaff(
+                        admin.username(), r.username(), r.email(), r.password(), r.role()));
     }
 
     @GetMapping

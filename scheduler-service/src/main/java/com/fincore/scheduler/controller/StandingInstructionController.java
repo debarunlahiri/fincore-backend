@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,7 +27,9 @@ public class StandingInstructionController {
     private final StandingInstructionService service;
     private final ZoneId zone;
 
-    public StandingInstructionController(StandingInstructionService service, @Value("${fincore.zone:Asia/Kolkata}") ZoneId zone) {
+    public StandingInstructionController(
+            StandingInstructionService service,
+            @Value("${fincore.zone:Asia/Kolkata}") ZoneId zone) {
         this.service = service;
         this.zone = zone;
     }
@@ -36,10 +37,17 @@ public class StandingInstructionController {
     @PostMapping("/standing-instructions")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('CUSTOMER')")
-    public InstructionResponse create(@AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody CreateRequest r) {
-        return InstructionResponse.from(service.create(
-                user.userId(), r.sourceAccountId(), r.targetAccountNumber(), r.amount(), r.frequency(),
-                r.firstRunDate(), r.remarks()));
+    public InstructionResponse create(
+            @AuthenticationPrincipal AuthenticatedUser user, @Valid @RequestBody CreateRequest r) {
+        return InstructionResponse.from(
+                service.create(
+                        user.userId(),
+                        r.sourceAccountNumber(),
+                        r.targetAccountNumber(),
+                        r.amount(),
+                        r.frequency(),
+                        r.firstRunDate(),
+                        r.remarks()));
     }
 
     @GetMapping("/standing-instructions")
@@ -48,22 +56,25 @@ public class StandingInstructionController {
         return service.list(user.userId()).stream().map(InstructionResponse::from).toList();
     }
 
-    @PostMapping("/standing-instructions/{id}/pause")
+    @PostMapping("/standing-instructions/{reference}/pause")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public InstructionResponse pause(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable UUID id) {
-        return InstructionResponse.from(service.pause(user.userId(), id));
+    public InstructionResponse pause(
+            @AuthenticationPrincipal AuthenticatedUser user, @PathVariable String reference) {
+        return InstructionResponse.from(service.pause(user.userId(), reference));
     }
 
-    @PostMapping("/standing-instructions/{id}/resume")
+    @PostMapping("/standing-instructions/{reference}/resume")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public InstructionResponse resume(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable UUID id) {
-        return InstructionResponse.from(service.resume(user.userId(), id));
+    public InstructionResponse resume(
+            @AuthenticationPrincipal AuthenticatedUser user, @PathVariable String reference) {
+        return InstructionResponse.from(service.resume(user.userId(), reference));
     }
 
-    @PostMapping("/standing-instructions/{id}/cancel")
+    @PostMapping("/standing-instructions/{reference}/cancel")
     @PreAuthorize("hasRole('CUSTOMER')")
-    public InstructionResponse cancel(@AuthenticationPrincipal AuthenticatedUser user, @PathVariable UUID id) {
-        return InstructionResponse.from(service.cancel(user.userId(), id));
+    public InstructionResponse cancel(
+            @AuthenticationPrincipal AuthenticatedUser user, @PathVariable String reference) {
+        return InstructionResponse.from(service.cancel(user.userId(), reference));
     }
 
     /** Operator trigger for the daily job (useful for demos and recovery after downtime). */

@@ -1,6 +1,16 @@
 server:
-  port: 8080
+  port: 9780
   shutdown: graceful
+  # request limits: bound what one connection or one request can cost (slowloris, oversized headers, huge lines)
+  max-http-request-header-size: 16KB
+  netty:
+    connection-timeout: 5s
+    idle-timeout: 30s
+    max-initial-line-length: 4096
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
 
 spring:
   application:
@@ -14,22 +24,32 @@ spring:
     gateway:
       httpclient:
         connect-timeout: 1000
-        response-timeout: 20s
+        response-timeout: 15s
+        # a bounded pool towards the services: a flood cannot open unlimited connections to them
+        pool:
+          type: fixed
+          max-connections: 500
+          acquire-timeout: 2000
+          max-idle-time: 30s
       default-filters:
         # clients can never present the service-to-service key
         - RemoveRequestHeader=X-Internal-Key
       globalcors:
         cors-configurations:
           '[/**]':
+            # the web app calls the gateway through its own server (same origin), so browsers need no CORS at all;
+            # set CORS_ALLOWED_ORIGINS only if you call the API directly from another origin
             allowedOriginPatterns: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
             allowedMethods: GET,POST,PUT,DELETE,OPTIONS
-            allowedHeaders: "*"
-            exposedHeaders: Idempotent-Replayed,X-Request-Id,Retry-After
+            allowedHeaders: Authorization,Content-Type,Idempotency-Key,X-Otp-Challenge,X-Otp-Code,X-Request-Id
+            allowCredentials: false
+            maxAge: 3600
+            exposedHeaders: Idempotent-Replayed,X-Request-Id,Retry-After,X-RateLimit-Limit
       routes:
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/api/v1/auth/**,/api/v1/admin/staff/**
+            - Path=/api/v1/auth/**,/api/v1/security/**,/api/v1/admin/staff/**
         - id: customer-service
           uri: ${CUSTOMER_SERVICE_URL:http://localhost:8082}
           predicates:
@@ -37,7 +57,7 @@ spring:
         - id: banking-core
           uri: ${CORE_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/api/v1/accounts/**,/api/v1/transfers/**,/api/v1/admin/reconciliation,/api/v1/admin/accounts/**
+            - Path=/api/v1/accounts/**,/api/v1/transfers/**,/api/v1/beneficiaries/**,/api/v1/deposits/**,/api/v1/loans/**,/api/v1/cards/**,/api/v1/admin/reconciliation,/api/v1/admin/accounts/**
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
           predicates:
@@ -48,6 +68,15 @@ spring:
             - Path=/api/v1/standing-instructions/**,/api/v1/admin/standing-instructions/**
 
 management:
+  server:
+    # metrics and health live on their own port that is never published to the internet
+    port: ${MANAGEMENT_PORT:9781}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
   endpoints:
     web:
       exposure:
@@ -62,8 +91,23 @@ management:
       enabled: ${REDIS_ENABLED:false}
 
 fincore:
+  security:
+    # peers allowed to tell us the real client address in X-Forwarded-For (web server, ingress, load balancer)
+    trusted-proxies: ${TRUSTED_PROXIES:127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    max-body-bytes: 1048576
   ratelimit:
-    # Off by default. Set REDIS_ENABLED=true (needs a Redis) to enforce limits.
-    enabled: ${REDIS_ENABLED:false}
+    # On by default. "memory" counts per gateway instance (fine for one instance and local runs);
+    # "redis" shares the counts across instances and needs a Redis (RATELIMIT_STORE=redis).
+    enabled: ${RATELIMIT_ENABLED:true}
+    store: ${RATELIMIT_STORE:memory}
     auth-per-minute: 10
+    otp-per-minute: 5
     money-per-minute: 20
+    write-per-minute: 60
+    ip-per-minute: 600
+    ip-per-second: 30
+
+logging:
+  level:
+    # an unreachable trace collector must not flood the log with stack traces
+    io.opentelemetry.exporter: OFF

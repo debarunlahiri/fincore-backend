@@ -25,17 +25,46 @@ The notification-service has no public API: it only consumes Kafka events (`finc
 Interactive docs: every service also serves Swagger UI at `http://localhost:<port>/swagger-ui.html` and the
 OpenAPI document at `http://localhost:<port>/v3/api-docs`.
 
+
+## Identifier change: references and account numbers (read this first)
+
+Customers never see internal ids any more. Wherever older sections of these documents show a UUID `id`,
+`accountId`, `sourceAccountId` or `journalId`, use the public identifiers below. Details and the new endpoints
+(payees, OTP, deposits, loans, cards, security) are in **[banking-features.md](banking-features.md)**.
+
+| Endpoint | Before | Now |
+| --- | --- | --- |
+| `GET /api/v1/accounts`, `/{...}` | response `id`; path `/{id}` | no `id`; path `/{accountNumber}` |
+| `/api/v1/accounts/{accountNumber}/deposits`, `withdrawals`, `statement`, `statement.csv` | path `{accountId}` | path `{accountNumber}` |
+| deposit / withdrawal response | `journalId`, `accountId`, `balance` | `reference`, `accountNumber`, `balance` |
+| statement line | `id`, `journalId` | `reference`, `description` |
+| `POST /api/v1/transfers` | body `sourceAccountId` | body `sourceAccountNumber` |
+| transfer response | `id`, `sourceAccountId`, `targetAccountId`, `journalId` | `reference`, `sourceAccountNumber`, `targetAccountNumber` |
+| `GET /api/v1/transfers/{id}` | UUID | `{reference}` |
+| `POST /api/v1/payments` | body `accountId` | body `accountNumber` |
+| payment response, `GET /api/v1/payments/{id}` | `id`, `accountId` | `reference`, `accountNumber`; path `{reference}` |
+| `POST /api/v1/standing-instructions` | body `sourceAccountId` | body `sourceAccountNumber` |
+| instruction response, `/{id}/pause`, `resume`, `cancel` | `id`, `sourceAccountId` | `reference`, `sourceAccountNumber`; path `{reference}` |
+| `POST /api/v1/admin/accounts/{id}/freeze`, `unfreeze` | account UUID | account number |
+| `GET /api/v1/customers/me` | `id` | no `id` |
+| `/api/v1/beneficiaries` | payees by account number, `DELETE /{accountNumber}` | payees of type `UPI`, `BANK`, `FINCORE`; `DELETE /{reference}` (`BEN...`) |
+| `POST /api/v1/cards` | body `nameOnCard` | no `nameOnCard`: the holder name is taken from the customer profile |
+| `POST /api/v1/auth/login` | any number of devices | one active device per user; 5 wrong passwords lock for 15 minutes |
+
+The example payloads further down in `banking-core.md`, `payment-service.md`, `scheduler-service.md` and
+`customer-service.md` have not been regenerated yet and still show the old field names.
+
 ## Base URLs
 
 | Environment | Base URL | Notes |
 | --- | --- | --- |
-| Via the gateway (use this) | `http://localhost:8080` | single entry point, adds `X-Request-Id`, rate limiting |
+| Via the gateway (use this) | `http://localhost:9780` | single entry point, adds `X-Request-Id`, rate limiting |
 | Directly to a service | `http://localhost:808x` | see the table above; needed for admin outbox/audit endpoints |
 
 All examples use shell variables so they can be pasted as they are:
 
 ```bash
-export BASE=http://localhost:8080
+export BASE=http://localhost:9780
 export TOKEN="<accessToken from register or login>"
 export ADMIN_TOKEN="<accessToken of the admin user>"
 ```
@@ -207,7 +236,7 @@ Limits: `/api/v1/auth/**` 10 requests per minute per client address; `POST /api/
 ## End-to-end quick start
 
 ```bash
-export BASE=http://localhost:8080
+export BASE=http://localhost:9780
 
 # 1. register (returns tokens) and keep the access token
 RESP=$(curl -s -X POST "$BASE/api/v1/auth/register" -H "Content-Type: application/json" -d '{

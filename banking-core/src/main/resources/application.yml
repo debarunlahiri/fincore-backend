@@ -1,6 +1,20 @@
 server:
   port: 8083
   shutdown: graceful
+  # request limits: bound what one connection or one request can cost
+  max-http-request-header-size: 16KB
+  tomcat:
+    connection-timeout: 5s
+    max-http-form-post-size: 64KB
+    max-swallow-size: 1MB
+    max-connections: 4000
+    accept-count: 200
+    threads:
+      max: 200
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
 
 spring:
   application:
@@ -31,6 +45,12 @@ spring:
         request.timeout.ms: 5000
 
 management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTLP_ENDPOINT:http://localhost:4318/v1/traces}
   endpoints:
     web:
       exposure:
@@ -54,6 +74,15 @@ fincore:
       base-url: ${CUSTOMER_SERVICE_URL:http://localhost:8082}
   account:
     default-daily-limit: 100000.00
+  transfer:
+    require-beneficiary: true
+    otp-threshold: 10000.00
+    per-transaction-limit: 200000.00
+  beneficiary:
+    cooling-period: PT1M
+  otp:
+    ttl: PT5M
+    expose-code: ${OTP_EXPOSE_CODE:true}
   fraud:
     high-value-threshold: 200000.00
     velocity-max-per-minute: 5
@@ -81,3 +110,8 @@ resilience4j:
         wait-duration-in-open-state: 10s
         record-exceptions:
           - com.fincore.common.exception.DependencyUnavailableException
+
+logging:
+  level:
+    # an unreachable trace collector must not flood the log with stack traces
+    io.opentelemetry.exporter: OFF

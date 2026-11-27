@@ -11,7 +11,9 @@ import java.time.LocalDate;
 public record RegisterRequest(
         @NotBlank @Size(min = 3, max = 50) @Pattern(regexp = "^[A-Za-z0-9._-]+$") String username,
         @NotBlank @Email String email,
-        @NotBlank @Size(min = 8, max = 72) String password,
+        @NotBlank @Pattern(regexp = PasswordPolicy.REGEX, message = PasswordPolicy.MESSAGE)
+                String password,
         @NotBlank @Size(max = 120) String fullName,
-        @NotBlank @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "must be 10-15 digits") String phone,
+        @NotBlank @Pattern(regexp = "^\\+?[0-9]{10,15}$", message = "must be 10-15 digits")
+                String phone,
         @NotNull @Past LocalDate dateOfBirth) {}

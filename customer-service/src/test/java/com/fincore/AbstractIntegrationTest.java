@@ -36,12 +36,15 @@ public abstract class AbstractIntegrationTest {
     @Autowired protected JwtService jwtService;
 
     protected String token(UUID userId, Role role) {
-        return "Bearer " + jwtService.generateAccessToken(userId, "user-" + userId.toString().substring(0, 6), role);
+        return "Bearer "
+                + jwtService.generateAccessToken(
+                        userId, "user-" + userId.toString().substring(0, 6), role);
     }
 
     protected static String registeredEvent(UUID userId, String fullName, String dob) {
         return """
                 {"userId":"%s","username":"u","email":"u@test.local","fullName":"%s","phone":"9876543210","dateOfBirth":"%s"}
-                """.formatted(userId, fullName, dob);
+                """
+                .formatted(userId, fullName, dob);
     }
 }

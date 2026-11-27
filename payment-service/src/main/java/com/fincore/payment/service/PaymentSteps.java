@@ -14,10 +14,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The local, transactional steps of the payment Saga. Each method is one short database transaction. Remote
- * calls (ledger, bank) happen between them, outside any transaction and without holding locks. Every state
- * change re-reads the payment under a row lock and is a no-op if the payment already moved on, so the request
- * thread and the recovery job can never apply the same step twice.
+ * The local, transactional steps of the payment Saga. Each method is one short database
+ * transaction. Remote calls (ledger, bank) happen between them, outside any transaction and without
+ * holding locks. Every state change re-reads the payment under a row lock and is a no-op if the
+ * payment already moved on, so the request thread and the recovery job can never apply the same
+ * step twice.
  */
 @Component
 public class PaymentSteps {
@@ -34,15 +35,34 @@ public class PaymentSteps {
         this.audit = audit;
     }
 
-    /** Step 0: durably record the intent before any money moves, so a crash can always be recovered. */
+    /**
+     * Step 0: durably record the intent before any money moves, so a crash can always be recovered.
+     */
     @Transactional
     public Payment create(
-            UUID userId, String key, UUID accountId, Rail rail, String beneficiaryRef, BigDecimal amount, String requestHash) {
+            UUID userId,
+            String key,
+            UUID accountId,
+            String accountNumber,
+            Rail rail,
+            String beneficiaryRef,
+            BigDecimal amount,
+            String requestHash) {
         if (amount.compareTo(rail.maxAmount()) > 0) {
-            throw FincoreException.unprocessable("RAIL_LIMIT_EXCEEDED", rail + " payments are limited to " + rail.maxAmount());
+            throw FincoreException.unprocessable(
+                    "RAIL_LIMIT_EXCEEDED", rail + " payments are limited to " + rail.maxAmount());
         }
         return payments.saveAndFlush(
-                new Payment(userId, key, accountId, rail, beneficiaryRef, amount, CURRENCY, requestHash));
+                new Payment(
+                        userId,
+                        key,
+                        accountId,
+                        accountNumber,
+                        rail,
+                        beneficiaryRef,
+                        amount,
+                        CURRENCY,
+                        requestHash));
     }
 
     /** Step 1 done: the ledger debited the customer. */
@@ -85,12 +105,14 @@ public class PaymentSteps {
         if (payment.getStatus() == PaymentStatus.DEBITED) {
             payment.markRefunded(reason, reversalJournalId);
             outbox.record("PAYMENT", payment.getId(), "PaymentRefunded", PaymentEvent.of(payment));
-            audit.record("system", "PAYMENT_REFUNDED", "PAYMENT", payment.getId().toString(), reason);
+            audit.record(
+                    "system", "PAYMENT_REFUNDED", "PAYMENT", payment.getId().toString(), reason);
         }
         return payment;
     }
 
     private Payment lock(UUID paymentId) {
-        return payments.lockById(paymentId).orElseThrow(() -> FincoreException.notFound("Payment not found"));
+        return payments.lockById(paymentId)
+                .orElseThrow(() -> FincoreException.notFound("Payment not found"));
     }
 }

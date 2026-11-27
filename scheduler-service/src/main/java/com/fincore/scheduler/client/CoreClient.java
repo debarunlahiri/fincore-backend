@@ -13,8 +13,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * HTTP adapter to banking-core. Retrying is safe: lookups are reads, and the transfer carries a deterministic
- * idempotency key (instruction id + run date), so a retry after a lost response is a replay, never a second payment.
+ * HTTP adapter to banking-core. Retrying is safe: lookups are reads, and the transfer carries a
+ * deterministic idempotency key (instruction id + run date), so a retry after a lost response is a
+ * replay, never a second payment.
  */
 @Component
 public class CoreClient implements CorePort {
@@ -30,7 +31,9 @@ public class CoreClient implements CorePort {
     public CoreClient(
             @Value("${fincore.clients.core.base-url}") String baseUrl,
             @Value("${fincore.internal.api-key}") String apiKey) {
-        this.http = new InternalRestClient(baseUrl, apiKey, Duration.ofSeconds(1), Duration.ofSeconds(10));
+        this.http =
+                new InternalRestClient(
+                        baseUrl, apiKey, Duration.ofSeconds(1), Duration.ofSeconds(10));
     }
 
     @Override
@@ -44,7 +47,20 @@ public class CoreClient implements CorePort {
     @CircuitBreaker(name = "core")
     @Retry(name = "core")
     public UUID accountIdByNumber(String accountNumber) {
-        return http.get("/internal/accounts/by-number/{number}", AccountRef.class, accountNumber).id();
+        return http.get("/internal/accounts/by-number/{number}", AccountRef.class, accountNumber)
+                .id();
+    }
+
+    @Override
+    @CircuitBreaker(name = "core")
+    @Retry(name = "core")
+    public UUID resolveOwnedAccount(UUID userId, String accountNumber) {
+        return http.get(
+                        "/internal/accounts/by-number/{number}/owner/{userId}",
+                        AccountRef.class,
+                        accountNumber,
+                        userId)
+                .id();
     }
 
     @Override
@@ -53,18 +69,19 @@ public class CoreClient implements CorePort {
     public TransferOutcome transfer(
             UUID userId,
             String idempotencyKey,
-            UUID sourceAccountId,
+            String sourceAccountNumber,
             String targetAccountNumber,
             BigDecimal amount,
             String currency,
             String remarks) {
         Map<String, Object> request = new LinkedHashMap<>();
-        request.put("sourceAccountId", sourceAccountId);
+        request.put("sourceAccountNumber", sourceAccountNumber);
         request.put("targetAccountNumber", targetAccountNumber);
         request.put("amount", amount);
         request.put("currency", currency);
         request.put("remarks", remarks);
-        Map<String, Object> body = Map.of("userId", userId, "idempotencyKey", idempotencyKey, "request", request);
+        Map<String, Object> body =
+                Map.of("userId", userId, "idempotencyKey", idempotencyKey, "request", request);
         TransferResponse response = http.post("/internal/transfers", body, TransferResponse.class);
         return new TransferOutcome(response.replayed());
     }

@@ -17,15 +17,20 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain filterChain(
-            HttpSecurity http, JwtService jwtService, @Value("${fincore.internal.api-key}") String internalKey)
+            HttpSecurity http,
+            JwtService jwtService,
+            @Value("${fincore.internal.api-key}") String internalKey)
             throws Exception {
         return CommonSecurity.statelessApi(
-                        http, jwtService, internalKey, a -> a.requestMatchers("/api/v1/auth/**").permitAll())
+                        http,
+                        jwtService,
+                        internalKey,
+                        a -> a.requestMatchers("/api/v1/auth/**").permitAll())
                 .build();
     }
 
     @Bean
     PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(12);
     }
 }

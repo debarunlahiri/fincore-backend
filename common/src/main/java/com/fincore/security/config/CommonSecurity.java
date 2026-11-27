@@ -21,19 +21,36 @@ public final class CommonSecurity {
             HttpSecurity http,
             JwtService jwtService,
             String internalApiKey,
-            Customizer<AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry> publicPaths)
+            Customizer<
+                            AuthorizeHttpRequestsConfigurer<HttpSecurity>
+                                    .AuthorizationManagerRequestMatcherRegistry>
+                    publicPaths)
             throws Exception {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(a -> {
-                    a.requestMatchers("/actuator/health/**", "/actuator/info", "/actuator/prometheus").permitAll();
-                    a.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
-                    publicPaths.customize(a);
-                    a.requestMatchers("/internal/**").hasRole(InternalApiKeyFilter.ROLE);
-                    a.anyRequest().authenticated();
-                })
-                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
-                .addFilterBefore(new InternalApiKeyFilter(internalApiKey), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(new JwtAuthenticationFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .authorizeHttpRequests(
+                        a -> {
+                            a.requestMatchers(
+                                            "/actuator/health/**",
+                                            "/actuator/info",
+                                            "/actuator/prometheus")
+                                    .permitAll();
+                            a.requestMatchers(
+                                            "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html")
+                                    .permitAll();
+                            publicPaths.customize(a);
+                            a.requestMatchers("/internal/**").hasRole(InternalApiKeyFilter.ROLE);
+                            a.anyRequest().authenticated();
+                        })
+                .exceptionHandling(
+                        e ->
+                                e.authenticationEntryPoint(
+                                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .addFilterBefore(
+                        new InternalApiKeyFilter(internalApiKey),
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(
+                        new JwtAuthenticationFilter(jwtService),
+                        UsernamePasswordAuthenticationFilter.class);
     }
 }

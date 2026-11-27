@@ -41,8 +41,15 @@ public class OutboxAdminController {
     @GetMapping("/failed")
     public List<FailedEvent> failed() {
         return repository.findTop100ByStatusOrderByCreatedAtAsc(OutboxStatus.FAILED).stream()
-                .map(e -> new FailedEvent(
-                        e.getId(), e.getEventType(), e.getAggregateId(), e.getAttempts(), e.getLastError(), e.getCreatedAt()))
+                .map(
+                        e ->
+                                new FailedEvent(
+                                        e.getId(),
+                                        e.getEventType(),
+                                        e.getAggregateId(),
+                                        e.getAttempts(),
+                                        e.getLastError(),
+                                        e.getCreatedAt()))
                 .toList();
     }
 
@@ -51,11 +58,20 @@ public class OutboxAdminController {
     @PreAuthorize("hasAnyRole('ADMIN', 'OPERATIONS')")
     @Transactional
     public FailedEvent replay(@PathVariable UUID id) {
-        OutboxEvent e = repository.findById(id).orElseThrow(() -> FincoreException.notFound("Outbox event not found"));
+        OutboxEvent e =
+                repository
+                        .findById(id)
+                        .orElseThrow(() -> FincoreException.notFound("Outbox event not found"));
         if (e.getStatus() != OutboxStatus.FAILED) {
             throw FincoreException.conflict("NOT_FAILED", "Only FAILED events can be replayed");
         }
         e.resetForReplay();
-        return new FailedEvent(e.getId(), e.getEventType(), e.getAggregateId(), e.getAttempts(), e.getLastError(), e.getCreatedAt());
+        return new FailedEvent(
+                e.getId(),
+                e.getEventType(),
+                e.getAggregateId(),
+                e.getAttempts(),
+                e.getLastError(),
+                e.getCreatedAt());
     }
 }

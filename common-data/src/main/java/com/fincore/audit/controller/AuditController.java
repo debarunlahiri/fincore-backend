@@ -27,9 +27,10 @@ public class AuditController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         var pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 200));
-        var result = actor == null || actor.isBlank()
-                ? repository.findAllByOrderByCreatedAtDesc(pageable)
-                : repository.findByActorOrderByCreatedAtDesc(actor, pageable);
+        var result =
+                actor == null || actor.isBlank()
+                        ? repository.findAllByOrderByCreatedAtDesc(pageable)
+                        : repository.findByActorOrderByCreatedAtDesc(actor, pageable);
         return PageResponse.of(result, AuditResponse::from);
     }
 }

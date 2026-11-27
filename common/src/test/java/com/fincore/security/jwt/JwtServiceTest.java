@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 public class JwtServiceTest {
 
     private static String secret(String seed) {
-        return Base64.getEncoder().encodeToString((seed + "-padding-padding-padding-padding").getBytes());
+        return Base64.getEncoder()
+                .encodeToString((seed + "-padding-padding-padding-padding").getBytes());
     }
 
     private static JwtService service(String secret, Duration ttl) {
@@ -45,13 +46,15 @@ public class JwtServiceTest {
     void expiredTokenIsRejected() {
         JwtService jwt = service(secret("one"), Duration.ofSeconds(-30));
 
-        assertThat(jwt.parse(jwt.generateAccessToken(UUID.randomUUID(), "a", Role.CUSTOMER))).isEmpty();
+        assertThat(jwt.parse(jwt.generateAccessToken(UUID.randomUUID(), "a", Role.CUSTOMER)))
+                .isEmpty();
     }
 
     @Test
     void tokenSignedWithAnotherKeyIsRejected() {
-        String token = service(secret("attacker"), Duration.ofMinutes(5))
-                .generateAccessToken(UUID.randomUUID(), "a", Role.ADMIN);
+        String token =
+                service(secret("attacker"), Duration.ofMinutes(5))
+                        .generateAccessToken(UUID.randomUUID(), "a", Role.ADMIN);
 
         assertThat(service(secret("server"), Duration.ofMinutes(5)).parse(token)).isEmpty();
     }
@@ -59,9 +62,12 @@ public class JwtServiceTest {
     @Test
     void tamperedPayloadIsRejected() {
         JwtService jwt = service(secret("one"), Duration.ofMinutes(5));
-        String[] parts = jwt.generateAccessToken(UUID.randomUUID(), "a", Role.CUSTOMER).split("\\.");
-        String forgedPayload = Base64.getUrlEncoder().withoutPadding()
-                .encodeToString("{\"sub\":\"x\",\"role\":\"ADMIN\"}".getBytes());
+        String[] parts =
+                jwt.generateAccessToken(UUID.randomUUID(), "a", Role.CUSTOMER).split("\\.");
+        String forgedPayload =
+                Base64.getUrlEncoder()
+                        .withoutPadding()
+                        .encodeToString("{\"sub\":\"x\",\"role\":\"ADMIN\"}".getBytes());
 
         assertThat(jwt.parse(parts[0] + "." + forgedPayload + "." + parts[2])).isEmpty();
     }

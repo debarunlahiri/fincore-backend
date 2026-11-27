@@ -17,7 +17,9 @@ public class StandingInstructionJob {
     private final StandingInstructionService service;
     private final ZoneId zone;
 
-    public StandingInstructionJob(StandingInstructionService service, @Value("${fincore.zone:Asia/Kolkata}") ZoneId zone) {
+    public StandingInstructionJob(
+            StandingInstructionService service,
+            @Value("${fincore.zone:Asia/Kolkata}") ZoneId zone) {
         this.service = service;
         this.zone = zone;
     }

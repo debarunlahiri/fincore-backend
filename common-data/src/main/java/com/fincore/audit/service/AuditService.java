@@ -20,11 +20,13 @@ public class AuditService {
     }
 
     /**
-     * REQUIRES_NEW so the audit row survives even when the calling transaction rolls back (for example a
-     * failed login). An audit write failure is logged but never breaks the business operation.
+     * REQUIRES_NEW so the audit row survives even when the calling transaction rolls back (for
+     * example a failed login). An audit write failure is logged but never breaks the business
+     * operation.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void record(String actor, String action, String entityType, String entityId, String details) {
+    public void record(
+            String actor, String action, String entityType, String entityId, String details) {
         try {
             repository.save(new AuditEntry(actor, action, entityType, entityId, details));
         } catch (RuntimeException e) {

@@ -12,18 +12,20 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
 /**
- * Sliding-window log in a Redis sorted set (score = request time). The whole check-and-add runs as one Lua
- * script, so it is atomic across gateway instances: no race between counting and recording a request.
- * Fails open: if Redis is unreachable the request is allowed rather than taking the whole API down with the cache.
+ * Sliding-window log in a Redis sorted set (score = request time). The whole check-and-add runs as
+ * one Lua script, so it is atomic across gateway instances: no race between counting and recording
+ * a request. If Redis is unreachable it falls back to a local in-memory limiter, so the API stays
+ * both available and protected.
  */
 @Component
-@ConditionalOnProperty(name = "fincore.ratelimit.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "fincore.ratelimit.store", havingValue = "redis")
 public class RedisSlidingWindowRateLimiter implements RateLimiter {
 
     private static final Logger log = LoggerFactory.getLogger(RedisSlidingWindowRateLimiter.class);
 
-    private static final DefaultRedisScript<Long> SCRIPT = new DefaultRedisScript<>(
-            """
+    private static final DefaultRedisScript<Long> SCRIPT =
+            new DefaultRedisScript<>(
+                    """
             local key = KEYS[1]
             local now = tonumber(ARGV[1])
             local window = tonumber(ARGV[2])
@@ -36,9 +38,11 @@ public class RedisSlidingWindowRateLimiter implements RateLimiter {
             redis.call('PEXPIRE', key, window)
             return 1
             """,
-            Long.class);
+                    Long.class);
 
     private final ReactiveStringRedisTemplate redis;
+    private final InMemorySlidingWindowRateLimiter fallback =
+            new InMemorySlidingWindowRateLimiter();
 
     public RedisSlidingWindowRateLimiter(ReactiveStringRedisTemplate redis) {
         this.redis = redis;
@@ -46,18 +50,22 @@ public class RedisSlidingWindowRateLimiter implements RateLimiter {
 
     @Override
     public Mono<Boolean> tryAcquire(String key, int limit, Duration window) {
-        List<String> args = List.of(
-                String.valueOf(System.currentTimeMillis()),
-                String.valueOf(window.toMillis()),
-                String.valueOf(limit),
-                UUID.randomUUID().toString());
+        List<String> args =
+                List.of(
+                        String.valueOf(System.currentTimeMillis()),
+                        String.valueOf(window.toMillis()),
+                        String.valueOf(limit),
+                        UUID.randomUUID().toString());
         return redis.execute(SCRIPT, List.of("ratelimit:" + key), args)
                 .next()
                 .map(allowed -> allowed == 1L)
                 .defaultIfEmpty(true)
-                .onErrorResume(e -> {
-                    log.warn("Rate limiter unavailable, allowing request: {}", e.toString());
-                    return Mono.just(true);
-                });
+                .onErrorResume(
+                        e -> {
+                            log.warn(
+                                    "Redis rate limiter unavailable, using the local limiter: {}",
+                                    e.toString());
+                            return fallback.tryAcquire(key, limit, window);
+                        });
     }
 }

@@ -14,9 +14,10 @@ public interface StandingInstructionRepository extends JpaRepository<StandingIns
 
     List<StandingInstruction> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
-    Optional<StandingInstruction> findByIdAndUserId(UUID id, UUID userId);
+    Optional<StandingInstruction> findByReferenceAndUserId(String reference, UUID userId);
 
-    @Query("""
+    @Query(
+            """
             select s from StandingInstruction s
             where s.status = com.fincore.scheduler.entity.InstructionStatus.ACTIVE and s.nextRunDate <= :today
             order by s.nextRunDate, s.createdAt

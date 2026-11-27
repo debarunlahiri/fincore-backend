@@ -9,7 +9,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
-/** Gives every request a correlation id, forwarded to the services and echoed to the client, for log tracing. */
+/**
+ * Gives every request a correlation id, forwarded to the services and echoed to the client, for log
+ * tracing.
+ */
 @Component
 public class RequestIdFilter implements GlobalFilter, Ordered {
 
@@ -18,10 +21,12 @@ public class RequestIdFilter implements GlobalFilter, Ordered {
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         String incoming = exchange.getRequest().getHeaders().getFirst(HEADER);
-        String requestId = incoming == null || incoming.isBlank() || incoming.length() > 64
-                ? UUID.randomUUID().toString()
-                : incoming;
-        ServerHttpRequest request = exchange.getRequest().mutate().header(HEADER, requestId).build();
+        String requestId =
+                incoming == null || incoming.isBlank() || incoming.length() > 64
+                        ? UUID.randomUUID().toString()
+                        : incoming;
+        ServerHttpRequest request =
+                exchange.getRequest().mutate().header(HEADER, requestId).build();
         exchange.getResponse().getHeaders().set(HEADER, requestId);
         return chain.filter(exchange.mutate().request(request).build());
     }

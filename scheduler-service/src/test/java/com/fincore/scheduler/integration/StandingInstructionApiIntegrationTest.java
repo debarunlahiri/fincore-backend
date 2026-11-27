@@ -24,21 +24,26 @@ public class StandingInstructionApiIntegrationTest extends AbstractIntegrationTe
     private String targetNumber;
 
     private void accounts() {
-        source = core.registerAccount(userId, "FC-A-" + UUID.randomUUID().toString().substring(0, 6));
+        source =
+                core.registerAccount(
+                        userId, "FC-A-" + UUID.randomUUID().toString().substring(0, 6));
         targetNumber = "FC-B-" + UUID.randomUUID().toString().substring(0, 6);
         core.registerAccount(UUID.randomUUID(), targetNumber);
     }
 
     private ResultActions create(String auth, String amount, String firstRun) throws Exception {
-        return mvc.perform(post("/api/v1/standing-instructions")
-                .header(HttpHeaders.AUTHORIZATION, auth)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json(Map.of(
-                        "sourceAccountId", source.toString(),
-                        "targetAccountNumber", targetNumber,
-                        "amount", amount,
-                        "frequency", "MONTHLY",
-                        "firstRunDate", firstRun))));
+        return mvc.perform(
+                post("/api/v1/standing-instructions")
+                        .header(HttpHeaders.AUTHORIZATION, auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(
+                                json(
+                                        Map.of(
+                                                "sourceAccountNumber", core.numberOf(source),
+                                                "targetAccountNumber", targetNumber,
+                                                "amount", amount,
+                                                "frequency", "MONTHLY",
+                                                "firstRunDate", firstRun))));
     }
 
     private static String today() {
@@ -52,25 +57,37 @@ public class StandingInstructionApiIntegrationTest extends AbstractIntegrationTe
     @Test
     void createListPauseResumeCancelLifecycle() throws Exception {
         accounts();
-        JsonNode created = objectMapper.readTree(create(customer(), "500.00", today())
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.frequency").value("MONTHLY"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString());
-        String id = created.get("id").asText();
+        JsonNode created =
+                objectMapper.readTree(
+                        create(customer(), "500.00", today())
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                                .andExpect(jsonPath("$.frequency").value("MONTHLY"))
+                                .andReturn()
+                                .getResponse()
+                                .getContentAsString());
+        String id = created.get("reference").asText();
 
-        mvc.perform(get("/api/v1/standing-instructions").header(HttpHeaders.AUTHORIZATION, customer()))
+        mvc.perform(
+                        get("/api/v1/standing-instructions")
+                                .header(HttpHeaders.AUTHORIZATION, customer()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
-        mvc.perform(post("/api/v1/standing-instructions/" + id + "/pause").header(HttpHeaders.AUTHORIZATION, customer()))
+        mvc.perform(
+                        post("/api/v1/standing-instructions/" + id + "/pause")
+                                .header(HttpHeaders.AUTHORIZATION, customer()))
                 .andExpect(jsonPath("$.status").value("PAUSED"));
-        mvc.perform(post("/api/v1/standing-instructions/" + id + "/resume").header(HttpHeaders.AUTHORIZATION, customer()))
+        mvc.perform(
+                        post("/api/v1/standing-instructions/" + id + "/resume")
+                                .header(HttpHeaders.AUTHORIZATION, customer()))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
-        mvc.perform(post("/api/v1/standing-instructions/" + id + "/cancel").header(HttpHeaders.AUTHORIZATION, customer()))
+        mvc.perform(
+                        post("/api/v1/standing-instructions/" + id + "/cancel")
+                                .header(HttpHeaders.AUTHORIZATION, customer()))
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
-        mvc.perform(post("/api/v1/standing-instructions/" + id + "/resume").header(HttpHeaders.AUTHORIZATION, customer()))
+        mvc.perform(
+                        post("/api/v1/standing-instructions/" + id + "/resume")
+                                .header(HttpHeaders.AUTHORIZATION, customer()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("INSTRUCTION_CANCELLED"));
     }
@@ -79,14 +96,18 @@ public class StandingInstructionApiIntegrationTest extends AbstractIntegrationTe
     void creatingOnSomeoneElsesAccountIs404() throws Exception {
         accounts();
 
-        create(bearer(UUID.randomUUID(), Role.CUSTOMER), "500.00", today()).andExpect(status().isNotFound());
+        create(bearer(UUID.randomUUID(), Role.CUSTOMER), "500.00", today())
+                .andExpect(status().isNotFound());
     }
 
     @Test
     void pastStartDateAndInvalidAmountAreRejected() throws Exception {
         accounts();
 
-        create(customer(), "500.00", LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1).toString())
+        create(
+                        customer(),
+                        "500.00",
+                        LocalDate.now(ZoneId.of("Asia/Kolkata")).minusDays(1).toString())
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("INVALID_START_DATE"));
         create(customer(), "0.00", today())
@@ -97,21 +118,35 @@ public class StandingInstructionApiIntegrationTest extends AbstractIntegrationTe
     @Test
     void anotherUserCannotControlMyInstruction() throws Exception {
         accounts();
-        String id = objectMapper.readTree(create(customer(), "500.00", today()).andReturn().getResponse().getContentAsString())
-                .get("id")
-                .asText();
+        String id =
+                objectMapper
+                        .readTree(
+                                create(customer(), "500.00", today())
+                                        .andReturn()
+                                        .getResponse()
+                                        .getContentAsString())
+                        .get("reference")
+                        .asText();
 
-        mvc.perform(post("/api/v1/standing-instructions/" + id + "/cancel")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(UUID.randomUUID(), Role.CUSTOMER)))
+        mvc.perform(
+                        post("/api/v1/standing-instructions/" + id + "/cancel")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearer(UUID.randomUUID(), Role.CUSTOMER)))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     void onlyAdminsCanTriggerTheJobAndCustomersCannot() throws Exception {
-        mvc.perform(post("/api/v1/admin/standing-instructions/run").header(HttpHeaders.AUTHORIZATION, customer()))
+        mvc.perform(
+                        post("/api/v1/admin/standing-instructions/run")
+                                .header(HttpHeaders.AUTHORIZATION, customer()))
                 .andExpect(status().isForbidden());
-        mvc.perform(post("/api/v1/admin/standing-instructions/run")
-                        .header(HttpHeaders.AUTHORIZATION, bearer(UUID.randomUUID(), Role.ADMIN)))
+        mvc.perform(
+                        post("/api/v1/admin/standing-instructions/run")
+                                .header(
+                                        HttpHeaders.AUTHORIZATION,
+                                        bearer(UUID.randomUUID(), Role.ADMIN)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.succeeded").exists())
                 .andExpect(jsonPath("$.deferred").exists());

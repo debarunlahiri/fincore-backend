@@ -8,10 +8,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.UUID;
 
 public record CreateRequest(
-        @NotNull UUID sourceAccountId,
+        @NotBlank String sourceAccountNumber,
         @NotBlank String targetAccountNumber,
         @NotNull @DecimalMin("0.01") @Digits(integer = 15, fraction = 2) BigDecimal amount,
         @NotNull Frequency frequency,

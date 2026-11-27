@@ -16,8 +16,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Real PostgreSQL (one shared container), real Saga code and real simulated bank; only banking-core is replaced
- * by {@link FakeLedger}, which honours the same idempotency contract as the real ledger endpoints.
+ * Real PostgreSQL (one shared container), real Saga code and real simulated bank; only banking-core
+ * is replaced by {@link FakeLedger}, which honours the same idempotency contract as the real ledger
+ * endpoints.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -49,7 +50,9 @@ public abstract class AbstractIntegrationTest {
     }
 
     protected String bearer(UUID userId, Role role) {
-        return "Bearer " + jwtService.generateAccessToken(userId, "user-" + userId.toString().substring(0, 6), role);
+        return "Bearer "
+                + jwtService.generateAccessToken(
+                        userId, "user-" + userId.toString().substring(0, 6), role);
     }
 
     protected String json(Object body) throws Exception {

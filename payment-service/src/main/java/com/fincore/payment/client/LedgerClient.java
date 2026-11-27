@@ -11,8 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * HTTP adapter to banking-core. Automatic retries are safe here precisely because the endpoints are idempotent
- * on the payment id; they apply only to DependencyUnavailableException (see application.yml).
+ * HTTP adapter to banking-core. Automatic retries are safe here precisely because the endpoints are
+ * idempotent on the payment id; they apply only to DependencyUnavailableException (see
+ * application.yml).
  */
 @Component
 public class LedgerClient implements LedgerPort {
@@ -22,13 +23,16 @@ public class LedgerClient implements LedgerPort {
     public LedgerClient(
             @Value("${fincore.clients.core.base-url}") String baseUrl,
             @Value("${fincore.internal.api-key}") String apiKey) {
-        this.http = new InternalRestClient(baseUrl, apiKey, Duration.ofSeconds(1), Duration.ofSeconds(5));
+        this.http =
+                new InternalRestClient(
+                        baseUrl, apiKey, Duration.ofSeconds(1), Duration.ofSeconds(5));
     }
 
     @Override
     @CircuitBreaker(name = "ledger")
     @Retry(name = "ledger")
-    public Posted debit(UUID paymentId, UUID userId, UUID accountId, BigDecimal amount, String description) {
+    public Posted debit(
+            UUID paymentId, UUID userId, UUID accountId, BigDecimal amount, String description) {
         return http.post(
                 "/internal/ledger/payment-debits",
                 Map.of(
@@ -40,10 +44,25 @@ public class LedgerClient implements LedgerPort {
                 Posted.class);
     }
 
+    private record AccountRef(UUID id) {}
+
+    @Override
+    @CircuitBreaker(name = "ledger")
+    @Retry(name = "ledger")
+    public UUID resolveAccount(UUID userId, String accountNumber) {
+        return http.get(
+                        "/internal/accounts/by-number/{accountNumber}/owner/{userId}",
+                        AccountRef.class,
+                        accountNumber,
+                        userId)
+                .id();
+    }
+
     @Override
     @CircuitBreaker(name = "ledger")
     @Retry(name = "ledger")
     public Posted reverse(UUID paymentId) {
-        return http.post("/internal/ledger/payment-reversals", Map.of("paymentId", paymentId), Posted.class);
+        return http.post(
+                "/internal/ledger/payment-reversals", Map.of("paymentId", paymentId), Posted.class);
     }
 }
