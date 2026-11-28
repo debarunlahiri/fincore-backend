@@ -1,6 +1,8 @@
 package com.fincore.core.client;
 
 import com.fincore.common.client.InternalRestClient;
+import com.fincore.common.exception.DependencyUnavailableException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import java.time.Duration;
@@ -34,9 +36,18 @@ public class CustomerClient {
                         baseUrl, apiKey, Duration.ofSeconds(1), Duration.ofSeconds(3));
     }
 
-    @CircuitBreaker(name = "customer")
+    @CircuitBreaker(name = "customer", fallbackMethod = "breakerOpen")
     @Retry(name = "customer")
     public CustomerSummary byUser(UUID userId) {
         return http.get("/internal/customers/by-user/{userId}", CustomerSummary.class, userId);
+    }
+
+    /**
+     * Fallback while the circuit is open: callers see the same "dependency unavailable" failure
+     * as for a timeout (a clean 503), not an internal error, and nothing waits on a dead service.
+     */
+    @SuppressWarnings("unused")
+    private CustomerSummary breakerOpen(UUID userId, CallNotPermittedException e) {
+        throw new DependencyUnavailableException("customer-service is temporarily unavailable");
     }
 }

@@ -1,4 +1,8 @@
 fincore:
+  mail:
+    # tests never talk to an SMTP server
+    enabled: false
+    dispatch-delay: PT1H
   kafka:
     # listeners are disabled; tests call NotificationService directly
     enabled: false

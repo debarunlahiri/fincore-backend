@@ -51,6 +51,9 @@ public class Journal {
             case FD_OPEN, FD_CLOSE -> "FDT";
             case LOAN_DISBURSAL, LOAN_REPAYMENT -> "LNT";
             case CARD_PURCHASE -> "CRD";
+            case MERCHANT_PAYMENT -> "MPT";
+            case MERCHANT_REFUND -> "MRF";
+            case MERCHANT_SETTLEMENT -> "STL";
         };
     }
 

@@ -39,15 +39,24 @@ public class AccountService {
      * connection or locks are held while waiting for the customer-service.
      */
     public Account open(UUID userId, AccountType type) {
-        if (type == AccountType.SYSTEM) {
+        if (type == AccountType.SYSTEM || type == AccountType.MERCHANT) {
             throw FincoreException.badRequest(
-                    "INVALID_ACCOUNT_TYPE", "SYSTEM accounts cannot be opened by customers");
+                    "INVALID_ACCOUNT_TYPE",
+                    type + " accounts cannot be opened this way"
+                            + (type == AccountType.MERCHANT
+                                    ? "; register as a merchant instead"
+                                    : ""));
         }
         if (!customerClient.byUser(userId).isKycVerified()) {
             throw FincoreException.unprocessable(
                     "KYC_REQUIRED", "KYC must be verified before opening an account");
         }
         return create(userId, type);
+    }
+
+    /** Called by the merchant service inside its own transaction after the KYC check. */
+    public Account createMerchantAccount(UUID userId) {
+        return create(userId, AccountType.MERCHANT);
     }
 
     private Account create(UUID userId, AccountType type) {

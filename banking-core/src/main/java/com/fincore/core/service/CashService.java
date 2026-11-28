@@ -25,6 +25,10 @@ public class CashService {
     public static final UUID SYSTEM_ACCOUNT_ID =
             UUID.fromString("00000000-0000-0000-0000-000000000001");
 
+    /** Counter-party of money that comes in from outside the bank (guest payments). */
+    public static final UUID GATEWAY_ACCOUNT_ID =
+            UUID.fromString("00000000-0000-0000-0000-000000000002");
+
     public record CashResult(
             String reference, UUID accountId, String accountNumber, BigDecimal balance) {}
 

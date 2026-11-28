@@ -5,6 +5,8 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 ARG MODULE
 WORKDIR /workspace
 COPY . .
+# fail with a readable message instead of Maven's "Missing argument for option: pl"
+RUN test -n "${MODULE}" || { echo "ERROR: build argument MODULE is missing. This Dockerfile builds one service at a time; start the stack with scripts/up.sh, or: docker build --build-arg MODULE=banking-core ." >&2; exit 1; }
 # -am also builds the common / common-data modules the service depends on
 RUN mvn -B -q -pl ${MODULE} -am package -DskipTests
 

@@ -19,6 +19,8 @@ x-dev: &dev
     SPRING_DEVTOOLS_RESTART_POLL_INTERVAL: 1s
     SPRING_DEVTOOLS_RESTART_QUIET_PERIOD: 500ms
     SPRING_DEVTOOLS_LIVERELOAD_ENABLED: "false"
+    # Spring colors the log levels even though the output is not a terminal
+    SPRING_OUTPUT_ANSI_ENABLED: always
 
 services:
   builder:

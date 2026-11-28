@@ -86,7 +86,7 @@ public class Account {
     }
 
     public void debit(BigDecimal amount) {
-        if (type != AccountType.SYSTEM && balance.compareTo(amount) < 0) {
+        if (type != AccountType.SYSTEM && type != AccountType.GATEWAY && balance.compareTo(amount) < 0) {
             throw FincoreException.unprocessable(
                     "INSUFFICIENT_FUNDS", "Insufficient funds in account " + accountNumber);
         }

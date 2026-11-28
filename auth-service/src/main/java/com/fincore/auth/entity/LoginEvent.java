@@ -6,13 +6,17 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+
 import java.time.Instant;
 import java.util.UUID;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One row per login attempt, successful or not, so customers can spot suspicious activity. */
+/**
+ * One row per login attempt, successful or not, so customers can spot suspicious activity.
+ */
 @Entity
 @Table(name = "login_events")
 @Getter
@@ -44,20 +48,20 @@ public class LoginEvent {
     private Instant createdAt = Instant.now();
 
     public LoginEvent(
-            UUID userId,
-            String username,
-            boolean success,
-            String reason,
-            String ipAddress,
-            String userAgent) {
+        UUID userId,
+        String username,
+        boolean success,
+        String reason,
+        String ipAddress,
+        String userAgent) {
         this.userId = userId;
         this.username = username;
         this.success = success;
         this.reason = reason;
         this.ipAddress = ipAddress;
         this.userAgent =
-                userAgent == null
-                        ? null
-                        : userAgent.substring(0, Math.min(200, userAgent.length()));
+            userAgent == null
+                ? null
+                : userAgent.substring(0, Math.min(200, userAgent.length()));
     }
 }

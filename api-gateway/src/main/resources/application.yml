@@ -57,7 +57,7 @@ spring:
         - id: banking-core
           uri: ${CORE_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/api/v1/accounts/**,/api/v1/transfers/**,/api/v1/beneficiaries/**,/api/v1/deposits/**,/api/v1/loans/**,/api/v1/cards/**,/api/v1/admin/reconciliation,/api/v1/admin/accounts/**
+            - Path=/api/v1/accounts/**,/api/v1/transfers/**,/api/v1/beneficiaries/**,/api/v1/deposits/**,/api/v1/loans/**,/api/v1/cards/**,/api/v1/merchants/**,/api/v1/webhooks/razorpay,/api/v1/admin/reconciliation,/api/v1/admin/merchants/**,/api/v1/admin/accounts/**
         - id: payment-service
           uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
           predicates:

@@ -12,6 +12,7 @@ import com.fincore.common.exception.FincoreException;
 import com.fincore.outbox.service.OutboxService;
 import com.fincore.security.jwt.JwtService;
 import com.fincore.security.model.Role;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,6 +23,7 @@ import java.time.LocalDate;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,14 +33,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     public record RegistrationData(
-            String username,
-            String email,
-            String password,
-            String fullName,
-            String phone,
-            LocalDate dateOfBirth) {}
+        String username,
+        String email,
+        String password,
+        String fullName,
+        String phone,
+        LocalDate dateOfBirth) {
+    }
 
-    public record Tokens(String accessToken, String refreshToken, long expiresInSeconds) {}
+    public record Tokens(String accessToken, String refreshToken, long expiresInSeconds) {
+    }
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -55,17 +59,17 @@ public class AuthService {
     private final Duration lockDuration;
 
     public AuthService(
-            UserRepository users,
-            RefreshTokenRepository refreshTokens,
-            PasswordEncoder passwordEncoder,
-            JwtService jwtService,
-            AuditService audit,
-            OutboxService outbox,
-            LoginEventRepository loginEvents,
-            @Value("${fincore.security.jwt.refresh-ttl:7d}") Duration refreshTtl,
-            @Value("${fincore.security.max-failed-attempts:5}") int maxFailedAttempts,
-            @Value("${fincore.security.single-session:true}") boolean singleSession,
-            @Value("${fincore.security.lock-duration:15m}") Duration lockDuration) {
+        UserRepository users,
+        RefreshTokenRepository refreshTokens,
+        PasswordEncoder passwordEncoder,
+        JwtService jwtService,
+        AuditService audit,
+        OutboxService outbox,
+        LoginEventRepository loginEvents,
+        @Value("${fincore.security.jwt.refresh-ttl:7d}") Duration refreshTtl,
+        @Value("${fincore.security.max-failed-attempts:5}") int maxFailedAttempts,
+        @Value("${fincore.security.single-session:true}") boolean singleSession,
+        @Value("${fincore.security.lock-duration:15m}") Duration lockDuration) {
         this.loginEvents = loginEvents;
         this.maxFailedAttempts = maxFailedAttempts;
         this.singleSession = singleSession;
@@ -96,38 +100,38 @@ public class AuthService {
             throw FincoreException.conflict("EMAIL_TAKEN", "Email is already registered");
         }
         User user =
-                users.save(
-                        new User(
-                                username,
-                                email,
-                                passwordEncoder.encode(data.password()),
-                                Role.CUSTOMER));
+            users.save(
+                new User(
+                    username,
+                    email,
+                    passwordEncoder.encode(data.password()),
+                    Role.CUSTOMER));
         outbox.record(
-                "USER",
+            "USER",
+            user.getId(),
+            "UserRegistered",
+            new UserRegistered(
                 user.getId(),
-                "UserRegistered",
-                new UserRegistered(
-                        user.getId(),
-                        username,
-                        email,
-                        data.fullName(),
-                        data.phone(),
-                        data.dateOfBirth(),
-                        Instant.now()));
+                username,
+                email,
+                data.fullName(),
+                data.phone(),
+                data.dateOfBirth(),
+                Instant.now()));
         return issueTokens(user, ClientInfo.UNKNOWN);
     }
 
     @Transactional
     public User createAdminIfAbsent(String username, String email, String rawPassword) {
         return users.findByUsername(username)
-                .orElseGet(
-                        () ->
-                                users.save(
-                                        new User(
-                                                username,
-                                                email,
-                                                passwordEncoder.encode(rawPassword),
-                                                Role.ADMIN)));
+            .orElseGet(
+                () ->
+                    users.save(
+                        new User(
+                            username,
+                            email,
+                            passwordEncoder.encode(rawPassword),
+                            Role.ADMIN)));
     }
 
     /**
@@ -136,7 +140,7 @@ public class AuthService {
      */
     @Transactional
     public User createStaff(
-            String actor, String username, String email, String rawPassword, Role role) {
+        String actor, String username, String email, String rawPassword, Role role) {
         if (!role.isStaff()) {
             throw FincoreException.badRequest("INVALID_ROLE", "Role must be a staff role");
         }
@@ -177,56 +181,56 @@ public class AuthService {
         User user = users.findByUsername(username.trim().toLowerCase()).orElse(null);
         if (user != null && user.isLocked()) {
             loginEvents.save(
-                    new LoginEvent(
-                            user.getId(),
-                            user.getUsername(),
-                            false,
-                            "LOCKED",
-                            client.ip(),
-                            client.userAgent()));
+                new LoginEvent(
+                    user.getId(),
+                    user.getUsername(),
+                    false,
+                    "LOCKED",
+                    client.ip(),
+                    client.userAgent()));
             throw new FincoreException(
-                    org.springframework.http.HttpStatus.LOCKED,
-                    "ACCOUNT_LOCKED",
-                    "Too many failed attempts. Try again after " + user.getLockedUntil());
+                org.springframework.http.HttpStatus.LOCKED,
+                "ACCOUNT_LOCKED",
+                "Too many failed attempts. Try again after " + user.getLockedUntil());
         }
         // one generic message for unknown user / bad password / disabled so we do not leak which
         // usernames exist
         if (user == null
-                || !user.isEnabled()
-                || !passwordEncoder.matches(password, user.getPasswordHash())) {
+            || !user.isEnabled()
+            || !passwordEncoder.matches(password, user.getPasswordHash())) {
             boolean locked =
-                    user != null
-                            && user.isEnabled()
-                            && user.recordFailedLogin(maxFailedAttempts, lockDuration);
+                user != null
+                    && user.isEnabled()
+                    && user.recordFailedLogin(maxFailedAttempts, lockDuration);
             loginEvents.save(
-                    new LoginEvent(
-                            user == null ? null : user.getId(),
-                            username,
-                            false,
-                            "BAD_CREDENTIALS",
-                            client.ip(),
-                            client.userAgent()));
+                new LoginEvent(
+                    user == null ? null : user.getId(),
+                    username,
+                    false,
+                    "BAD_CREDENTIALS",
+                    client.ip(),
+                    client.userAgent()));
             audit.record(username, locked ? "ACCOUNT_LOCKED" : "LOGIN_FAILED", "USER", null, null);
             throw FincoreException.unauthorized("Invalid credentials");
         }
         user.recordSuccessfulLogin();
         loginEvents.save(
-                new LoginEvent(
-                        user.getId(),
-                        user.getUsername(),
-                        true,
-                        null,
-                        client.ip(),
-                        client.userAgent()));
+            new LoginEvent(
+                user.getId(),
+                user.getUsername(),
+                true,
+                null,
+                client.ip(),
+                client.userAgent()));
         audit.record(user.getUsername(), "LOGIN_SUCCEEDED", "USER", user.getId().toString(), null);
         if (singleSession && refreshTokens.deleteAllForUser(user.getId()) > 0) {
             // one active device per user: signing in here ends the session on any other device
             audit.record(
-                    user.getUsername(),
-                    "SESSION_REPLACED",
-                    "USER",
-                    user.getId().toString(),
-                    client.ip());
+                user.getUsername(),
+                "SESSION_REPLACED",
+                "USER",
+                user.getId().toString(),
+                client.ip());
         }
         return issueTokens(user, client);
     }
@@ -234,25 +238,27 @@ public class AuthService {
     @Transactional(readOnly = true)
     public java.util.List<LoginEvent> loginHistory(UUID userId, int limit) {
         return loginEvents.findByUserIdOrderByCreatedAtDesc(
-                userId,
-                org.springframework.data.domain.PageRequest.of(
-                        0, Math.min(Math.max(limit, 1), 100)));
+            userId,
+            org.springframework.data.domain.PageRequest.of(
+                0, Math.min(Math.max(limit, 1), 100)));
     }
 
-    /** Verifies the current password, sets the new one and signs the user out everywhere. */
+    /**
+     * Verifies the current password, sets the new one and signs the user out everywhere.
+     */
     @Transactional
     public void changePassword(UUID userId, String currentPassword, String newPassword) {
         User user =
-                users.findById(userId)
-                        .orElseThrow(() -> FincoreException.notFound("User not found"));
+            users.findById(userId)
+                .orElseThrow(() -> FincoreException.notFound("User not found"));
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             audit.record(
-                    user.getUsername(), "PASSWORD_CHANGE_FAILED", "USER", userId.toString(), null);
+                user.getUsername(), "PASSWORD_CHANGE_FAILED", "USER", userId.toString(), null);
             throw FincoreException.badRequest("WRONG_PASSWORD", "Current password is incorrect");
         }
         if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
             throw FincoreException.badRequest(
-                    "PASSWORD_REUSED", "New password must differ from the current one");
+                "PASSWORD_REUSED", "New password must differ from the current one");
         }
         user.changePassword(passwordEncoder.encode(newPassword));
         refreshTokens.revokeAllForUser(userId);
@@ -262,15 +268,15 @@ public class AuthService {
     @Transactional(readOnly = true)
     public java.util.List<RefreshToken> activeSessions(UUID userId) {
         return refreshTokens.findByUserIdAndRevokedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
-                userId, Instant.now());
+            userId, Instant.now());
     }
 
     @Transactional
     public void revokeSession(UUID userId, UUID sessionId) {
         refreshTokens
-                .findByIdAndUserId(sessionId, userId)
-                .orElseThrow(() -> FincoreException.notFound("Session not found"))
-                .revoke();
+            .findByIdAndUserId(sessionId, userId)
+            .orElseThrow(() -> FincoreException.notFound("Session not found"))
+            .revoke();
     }
 
     @Transactional
@@ -286,21 +292,21 @@ public class AuthService {
     @Transactional(noRollbackFor = FincoreException.class)
     public Tokens refresh(String rawRefreshToken) {
         RefreshToken stored =
-                refreshTokens
-                        .findByTokenHash(hash(rawRefreshToken))
-                        .orElseThrow(() -> FincoreException.unauthorized("Invalid refresh token"));
+            refreshTokens
+                .findByTokenHash(hash(rawRefreshToken))
+                .orElseThrow(() -> FincoreException.unauthorized("Invalid refresh token"));
         if (stored.isRevoked()) {
             refreshTokens.revokeAllForUser(stored.getUserId());
             throw FincoreException.unauthorized(
-                    "Refresh token reuse detected, all sessions revoked");
+                "Refresh token reuse detected, all sessions revoked");
         }
         if (stored.isExpired()) {
             throw FincoreException.unauthorized("Refresh token expired");
         }
         User user =
-                users.findById(stored.getUserId())
-                        .filter(User::isEnabled)
-                        .orElseThrow(() -> FincoreException.unauthorized("Invalid refresh token"));
+            users.findById(stored.getUserId())
+                .filter(User::isEnabled)
+                .orElseThrow(() -> FincoreException.unauthorized("Invalid refresh token"));
         stored.revoke();
         return issueTokens(user, new ClientInfo(stored.getIpAddress(), stored.getUserAgent()));
     }
@@ -315,22 +321,22 @@ public class AuthService {
         RANDOM.nextBytes(bytes);
         String refresh = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         refreshTokens.save(
-                new RefreshToken(
-                        user.getId(),
-                        hash(refresh),
-                        Instant.now().plus(refreshTtl),
-                        client.ip(),
-                        client.userAgent()));
+            new RefreshToken(
+                user.getId(),
+                hash(refresh),
+                Instant.now().plus(refreshTtl),
+                client.ip(),
+                client.userAgent()));
         String access =
-                jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRole());
+            jwtService.generateAccessToken(user.getId(), user.getUsername(), user.getRole());
         return new Tokens(access, refresh, jwtService.accessTtl().toSeconds());
     }
 
     private static String hash(String token) {
         try {
             byte[] digest =
-                    MessageDigest.getInstance("SHA-256")
-                            .digest(token.getBytes(StandardCharsets.UTF_8));
+                MessageDigest.getInstance("SHA-256")
+                    .digest(token.getBytes(StandardCharsets.UTF_8));
             return HexFormat.of().formatHex(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);

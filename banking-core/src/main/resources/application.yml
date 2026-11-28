@@ -62,8 +62,19 @@ management:
 
 fincore:
   zone: Asia/Kolkata
+  web:
+    # the address a scanned payment QR opens; set WEB_BASE_URL to the hosted web app
+    base-url: ${WEB_BASE_URL:http://localhost:3000}
   kafka:
     enabled: ${KAFKA_ENABLED:true}
+  qr:
+    # signs fixed-amount payment links so the amount cannot be edited; set a long random value outside dev
+    signing-secret: ${QR_SIGNING_SECRET:dev-qr-signing-secret-change-me}
+  razorpay:
+    # test keys from the Razorpay dashboard; with no keys, guest payments answer GATEWAY_NOT_CONFIGURED
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
   internal:
     api-key: ${INTERNAL_API_KEY:dev-internal-key-change-me}
   security:

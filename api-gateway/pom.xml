@@ -57,6 +57,29 @@
         </dependency>
     </dependencies>
 
+    <profiles>
+        <!-- Only for running the gateway directly on an Apple Silicon Mac (IDE, dev-watch.sh). Netty then uses the
+             macOS DNS configuration instead of logging "Unable to load MacOSDnsServerAddressStreamProvider".
+             Skipped on Linux, so the Docker image is unchanged. -->
+        <profile>
+            <id>macos-netty-dns</id>
+            <activation>
+                <os>
+                    <family>mac</family>
+                    <arch>aarch64</arch>
+                </os>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>io.netty</groupId>
+                    <artifactId>netty-resolver-dns-native-macos</artifactId>
+                    <classifier>osx-aarch_64</classifier>
+                    <scope>runtime</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
+
     <build>
         <plugins>
             <plugin>

@@ -271,3 +271,16 @@ curl -s http://localhost:8083/actuator/prometheus | head -n 5
 # TYPE jvm_memory_used_bytes gauge
 jvm_memory_used_bytes{area="heap",id="G1 Eden Space",} 4.1943040E7
 ```
+
+
+## Merchant back office (banking-core, via the gateway)
+
+`/api/v1/admin/merchants`. Read endpoints: ADMIN, OPERATIONS and COMPLIANCE. Actions: ADMIN and OPERATIONS.
+
+| Endpoint | Notes |
+| --- | --- |
+| `GET /summary` | merchant counts, today/month volume, fees earned this month, pending settlement, merchants on settlement hold, royalty on hold |
+| `GET /?query=&status=` | latest 100 merchants, search by name or code, `status` is `ACTIVE` or `SUSPENDED`. No internal ids or owner ids. |
+| `POST /{merchantCode}/suspend`, `/reactivate` | platform suspension, audited. Suspending a main merchant also stops its outlets taking payments. |
+| `POST /{merchantCode}/settle` | settle one merchant now (ignores retry back-off) |
+| `POST /settle-due` | run the daily settlement for every merchant that is due, returns `{settled}` |

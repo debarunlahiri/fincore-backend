@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -22,7 +23,23 @@ public class SecurityConfig {
             JwtService jwtService,
             @Value("${fincore.internal.api-key}") String internalKey)
             throws Exception {
-        return CommonSecurity.statelessApi(http, jwtService, internalKey, a -> {}).build();
+        return CommonSecurity.statelessApi(
+                        http,
+                        jwtService,
+                        internalKey,
+                        a ->
+                                // paying a merchant needs no sign-in; every one of these checks a signature or
+                                // only reveals what the merchant already shows on its QR
+                                a.requestMatchers(
+                                                HttpMethod.GET, "/api/v1/merchants/lookup/*")
+                                        .permitAll()
+                                        .requestMatchers(
+                                                HttpMethod.POST,
+                                                "/api/v1/merchants/*/guest-pay/orders",
+                                                "/api/v1/merchants/guest-pay/*/confirm",
+                                                "/api/v1/webhooks/razorpay")
+                                        .permitAll())
+                .build();
     }
 
     @Configuration
@@ -32,6 +49,11 @@ public class SecurityConfig {
         @Bean
         NewTopic transferEventsTopic() {
             return TopicBuilder.name("fincore.transfer-events").partitions(3).replicas(1).build();
+        }
+
+        @Bean
+        NewTopic merchantEventsTopic() {
+            return TopicBuilder.name("fincore.merchant-events").partitions(3).replicas(1).build();
         }
 
         @Bean

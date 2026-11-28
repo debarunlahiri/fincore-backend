@@ -117,6 +117,8 @@ because Lombok annotation processing is off by default on newer JDKs and the bui
 **1. Everything in Docker (simplest, builds with JDK 21 inside the image)**
 
 ```bash
+scripts/start.sh     # hot reload (file watcher) + live colored logs; --no-watch for normal images
+scripts/stop.sh      # stops everything, Docker Desktop stays up
 scripts/up.sh        # frees the backend ports, then runs `docker compose up -d --build`
 ```
 

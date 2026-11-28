@@ -13,6 +13,8 @@ x-service: &service
     DB_PASSWORD: fincore
     KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     KAFKA_ENABLED: "true"
+    # colored log levels in `docker compose logs`
+    SPRING_OUTPUT_ANSI_ENABLED: always
     # the dev defaults below are for local use only; override them anywhere else
     JWT_SECRET: ${JWT_SECRET:-ZmluY29yZS1kZXYtb25seS1zZWNyZXQta2V5LW5vdC1mb3ItcHJvZHVjdGlvbi0yMDI2}
     INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key-change-me}
@@ -113,6 +115,14 @@ services:
     environment:
       <<: *service-env
       DB_URL: jdbc:postgresql://postgres:5432/fincore_core
+      # where customers open a payment QR: the web app address (the Vercel URL when it is hosted there)
+      WEB_BASE_URL: ${WEB_BASE_URL:-http://localhost:3000}
+      # signs fixed-amount payment links so the payer cannot edit the amount
+      QR_SIGNING_SECRET: ${QR_SIGNING_SECRET:-dev-qr-signing-secret-change-me}
+      # guest (not signed in) payments through Razorpay; test keys are fine
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
     ports:
       - "127.0.0.1:8083:8083"
 
@@ -131,6 +141,15 @@ services:
     environment:
       <<: *service-env
       DB_URL: jdbc:postgresql://postgres:5432/fincore_notification
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Fincore}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-${SMTP_USER:-}}
+      MAIL_MAX_ATTEMPTS: ${MAIL_MAX_ATTEMPTS:-8}
+      MAIL_DISPATCH_DELAY: ${MAIL_DISPATCH_DELAY:-PT5S}
     ports:
       - "127.0.0.1:8085:8085"
 

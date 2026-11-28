@@ -8,12 +8,14 @@ import com.fincore.payment.entity.Payment;
 import com.fincore.payment.entity.PaymentStatus;
 import com.fincore.payment.entity.Rail;
 import com.fincore.payment.repository.PaymentRepository;
+
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,7 +30,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class PaymentService {
 
-    public record Outcome(Payment payment, boolean replayed) {}
+    public record Outcome(Payment payment, boolean replayed) {
+    }
 
     private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
@@ -38,10 +41,10 @@ public class PaymentService {
     private final ExternalBankGateway gateway;
 
     public PaymentService(
-            PaymentSteps steps,
-            PaymentRepository payments,
-            LedgerPort ledger,
-            ExternalBankGateway gateway) {
+        PaymentSteps steps,
+        PaymentRepository payments,
+        LedgerPort ledger,
+        ExternalBankGateway gateway) {
         this.steps = steps;
         this.payments = payments;
         this.ledger = ledger;
@@ -49,16 +52,16 @@ public class PaymentService {
     }
 
     public Outcome pay(
-            UUID userId,
-            String idempotencyKey,
-            String accountNumber,
-            Rail rail,
-            String beneficiaryRef,
-            BigDecimal amount) {
+        UUID userId,
+        String idempotencyKey,
+        String accountNumber,
+        Rail rail,
+        String beneficiaryRef,
+        BigDecimal amount) {
         String key = idempotencyKey == null ? "" : idempotencyKey.trim();
         if (key.isEmpty() || key.length() > 100) {
             throw FincoreException.badRequest(
-                    "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header (1-100 chars) is required");
+                "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header (1-100 chars) is required");
         }
         String hash = fingerprint(accountNumber, rail, beneficiaryRef, amount);
 
@@ -72,19 +75,19 @@ public class PaymentService {
         Payment payment;
         try {
             payment =
-                    steps.create(
-                            userId,
-                            key,
-                            accountId,
-                            accountNumber.trim(),
-                            rail,
-                            beneficiaryRef.trim(),
-                            amount,
-                            hash);
+                steps.create(
+                    userId,
+                    key,
+                    accountId,
+                    accountNumber.trim(),
+                    rail,
+                    beneficiaryRef.trim(),
+                    amount,
+                    hash);
         } catch (DataIntegrityViolationException race) {
             return payments.findByInitiatedByAndIdempotencyKey(userId, key)
-                    .map(p -> replay(p, hash))
-                    .orElseThrow(() -> race);
+                .map(p -> replay(p, hash))
+                .orElseThrow(() -> race);
         }
         return new Outcome(drive(payment, false), false);
     }
@@ -109,20 +112,20 @@ public class PaymentService {
     private Payment debit(Payment payment) {
         try {
             var posted =
-                    ledger.debit(
-                            payment.getId(),
-                            payment.getInitiatedBy(),
-                            payment.getAccountId(),
-                            payment.getAmount(),
-                            payment.getRail() + " payment to " + payment.getBeneficiaryRef());
+                ledger.debit(
+                    payment.getId(),
+                    payment.getInitiatedBy(),
+                    payment.getAccountId(),
+                    payment.getAmount(),
+                    payment.getRail() + " payment to " + payment.getBeneficiaryRef());
             return steps.markDebited(payment.getId(), posted.journalId());
         } catch (DependencyUnavailableException e) {
             // unknown whether banking-core applied it; the debit is idempotent on the payment id,
             // so retry later
             log.warn(
-                    "Ledger unavailable while debiting payment {}: {}",
-                    payment.getId(),
-                    e.getMessage());
+                "Ledger unavailable while debiting payment {}: {}",
+                payment.getId(),
+                e.getMessage());
             return payment;
         } catch (FincoreException e) {
             // definitive business rejection: no money moved, record why
@@ -147,14 +150,14 @@ public class PaymentService {
         }
         try {
             var result =
-                    gateway.submit(
-                            payment.getRail(),
-                            reference,
-                            payment.getBeneficiaryRef(),
-                            payment.getAmount());
+                gateway.submit(
+                    payment.getRail(),
+                    reference,
+                    payment.getBeneficiaryRef(),
+                    payment.getAmount());
             return result.accepted()
-                    ? steps.settle(payment.getId())
-                    : refund(payment, result.reason());
+                ? steps.settle(payment.getId())
+                : refund(payment, result.reason());
         } catch (ExternalBankGateway.GatewayTimeoutException e) {
             // Unknown outcome: refunding now could double-pay if the bank did process it. Stay
             // DEBITED; the
@@ -164,16 +167,18 @@ public class PaymentService {
         }
     }
 
-    /** Compensation: reverse the ledger debit (idempotent), then record the refund. */
+    /**
+     * Compensation: reverse the ledger debit (idempotent), then record the refund.
+     */
     private Payment refund(Payment payment, String reason) {
         try {
             var reversal = ledger.reverse(payment.getId());
             return steps.markRefunded(payment.getId(), reason, reversal.journalId());
         } catch (DependencyUnavailableException e) {
             log.warn(
-                    "Ledger unavailable while refunding payment {}: {}",
-                    payment.getId(),
-                    e.getMessage());
+                "Ledger unavailable while refunding payment {}: {}",
+                payment.getId(),
+                e.getMessage());
             return payment;
         }
     }
@@ -181,26 +186,26 @@ public class PaymentService {
     private static Outcome replay(Payment existing, String hash) {
         if (!existing.getRequestHash().equals(hash)) {
             throw FincoreException.unprocessable(
-                    "IDEMPOTENCY_KEY_REUSED",
-                    "Idempotency-Key was already used with a different request");
+                "IDEMPOTENCY_KEY_REUSED",
+                "Idempotency-Key was already used with a different request");
         }
         return new Outcome(existing, true);
     }
 
     private static String fingerprint(
-            String accountNumber, Rail rail, String beneficiaryRef, BigDecimal amount) {
+        String accountNumber, Rail rail, String beneficiaryRef, BigDecimal amount) {
         String canonical =
-                String.join(
-                        "|",
-                        accountNumber.trim(),
-                        rail.name(),
-                        beneficiaryRef.trim(),
-                        amount.stripTrailingZeros().toPlainString());
+            String.join(
+                "|",
+                accountNumber.trim(),
+                rail.name(),
+                beneficiaryRef.trim(),
+                amount.stripTrailingZeros().toPlainString());
         try {
             return HexFormat.of()
-                    .formatHex(
-                            MessageDigest.getInstance("SHA-256")
-                                    .digest(canonical.getBytes(StandardCharsets.UTF_8)));
+                .formatHex(
+                    MessageDigest.getInstance("SHA-256")
+                        .digest(canonical.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }

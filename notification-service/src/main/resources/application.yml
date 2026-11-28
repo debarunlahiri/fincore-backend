@@ -33,6 +33,19 @@ spring:
           time_zone: UTC
   jackson:
     default-property-inclusion: non_null
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:465}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      # SMTP_SECURE=true: TLS on connect (port 465). false: STARTTLS (port 587)
+      mail.smtp.ssl.enable: ${SMTP_SECURE:true}
+      mail.smtp.starttls.enable: ${SMTP_STARTTLS:false}
+      mail.smtp.connectiontimeout: 10000
+      mail.smtp.timeout: 15000
+      mail.smtp.writetimeout: 15000
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
@@ -60,6 +73,15 @@ management:
         enabled: true
 
 fincore:
+  mail:
+    # no SMTP_HOST/SMTP_USER set: emails are recorded but not sent
+    enabled: ${MAIL_ENABLED:true}
+    from-name: ${MAIL_FROM_NAME:Fincore}
+    from-address: ${MAIL_FROM_ADDRESS:${SMTP_USER:}}
+    # failed emails are retried 30s, 1m, 2m, 4m ... up to 1h apart, until this many attempts
+    max-attempts: ${MAIL_MAX_ATTEMPTS:8}
+    dispatch-delay: ${MAIL_DISPATCH_DELAY:PT5S}
+    batch-size: 20
   kafka:
     enabled: ${KAFKA_ENABLED:true}
   internal:

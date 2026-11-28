@@ -185,3 +185,150 @@ statement with `statementReference`.
 - **One device at a time:** signing in on a new device ends the session on the old one (`fincore.security.single-session`,
   default `true`). The old device's refresh token stops working; its access token lapses within 5 minutes
   (`access-ttl`). The web app then returns to the sign-in page with an explanation.
+
+## Merchant accounts, franchises and settlement
+
+All endpoints are under `/api/v1/merchants`, role `CUSTOMER`, and need verified KYC to register. A merchant
+gets a dedicated `MERCHANT` account (it cannot be opened through `POST /accounts`).
+
+### Plans
+
+| | STARTER | BUSINESS |
+| --- | --- | --- |
+| Fee per payment | 0% | 1.5% |
+| Per payment | 10,000 | 2,00,000 |
+| Per day (volume / payments) | 50,000 / 50 | 20,00,000 / 2,000 |
+| Per month | 2,00,000 | 1,00,00,000 |
+| Settlement | 2 days after the payment | next run, or on demand |
+| Franchise outlets | none | up to 50 |
+
+`GET /plans` returns these numbers. Fee, limits and settlement delay of a franchise outlet are those of its
+main merchant's plan.
+
+### Taking payments
+
+| Endpoint | Notes |
+| --- | --- |
+| `POST /` | `{businessName, category}`, category is `RETAIL FOOD SERVICES EDUCATION HEALTH ONLINE OTHER`. One merchant account per user. Returns the dashboard (`MerchantResponse`). |
+| `GET /me` | dashboard: plan and limits, balance, today/month usage, `pendingSettlement`, role `STANDALONE`, `MAIN` or `OUTLET` |
+| `PUT /me/plan` | `{plan}`. Outlets cannot change plan; a plan cannot be downgraded below the size of the franchise network. |
+| `GET /lookup/{merchantCode}` | what a customer sees before paying (name, category). `merchantCode` is the `MER...` reference. |
+| `POST /{merchantCode}/pay` | `{accountNumber, amount, note}`. Debits the customer at once. Customers get a generic `MERCHANT_LIMIT_REACHED` when a merchant limit is hit and never see fee or royalty. |
+| `GET /me/payments` | latest 100, with fee, royalty, net, masked payer account, `settled` |
+| `POST /me/payments/{reference}/refund` | full refund, only before the payment is settled (`ALREADY_SETTLED` afterwards) |
+
+### Settlement
+
+Customer money is held on the system account until a settlement pays it out:
+`gross - fee - royalty` goes to the merchant account, `royalty` to the main merchant, the fee stays with the
+platform. One journal per settlement (`STL...`), visible on the account statement.
+
+| Endpoint | Notes |
+| --- | --- |
+| `GET /me/settlements` | latest 50 |
+| `POST /me/settlements` | settle everything already eligible; `NOTHING_TO_SETTLE` if empty |
+
+A daily job (`fincore.merchant.settlement-cron`, default 02:00) settles every merchant automatically.
+
+### Franchise network (BUSINESS main merchants)
+
+A main merchant invites a franchisee with an agreed royalty (0-30% of each payment after the fee). The
+franchisee, any KYC-verified customer without a merchant account, joins with the invite code and becomes a
+merchant of their own, with their own account, settled on their own.
+
+| Endpoint | Notes |
+| --- | --- |
+| `GET /me/network` | outlets (today/month volume, royalty earned), invites, total royalty |
+| `POST /me/network/invites` | `{royaltyPercent, note}`, valid for 7 days. `PLAN_UPGRADE_REQUIRED` on STARTER |
+| `DELETE /me/network/invites/{inviteCode}` | cancel a pending invite |
+| `POST /me/network/outlets/{merchantCode}/suspend`, `/resume` | a suspended outlet (or any outlet of a suspended main merchant) accepts no payments |
+| `GET /invites/{inviteCode}` | terms shown to the prospective franchisee |
+| `POST /join` | `{inviteCode, businessName}` |
+
+### Fallbacks
+
+- **Backup accounts.** `POST /{merchantCode}/pay` accepts `backupAccountNumbers` (up to 2, all the customer's
+  own). If the chosen account fails with `INSUFFICIENT_FUNDS`, `ACCOUNT_NOT_ACTIVE` or `DAILY_LIMIT_EXCEEDED`,
+  the next one is tried in order, each attempt in its own transaction. Merchant-side errors never fall back. The
+  receipt says `paidFromAccount` and `usedBackupAccount`; if all fail, the first error is returned.
+- **Settlement retry and hold.** A failed settlement leaves the payments pending and the merchant in back-off
+  (2h, 4h, 8h, 16h, then 24h); the daily job skips it until then. The dashboard shows `settlementIssue` and
+  `settlementRetryAt`; `POST /me/settlements` ignores the back-off. A success clears it.
+- **Royalty hold.** If the main merchant's account cannot receive money, the outlet is still paid its net; the
+  royalty stays on the system account (`royaltyOnHold` on the outlet, `royaltyHeld` on the settlement) and is paid
+  with the next settlement once the main merchant's account is active.
+- **Service fallback.** The customer-service circuit breaker now has a fallback, so an open circuit is a clean 503.
+  Only registration and joining need it (KYC check, `KYC_UNAVAILABLE`); payments, refunds and settlements of
+  existing merchants never call it and keep working.
+
+Migration: banking-core `V4__merchants.sql`. Unverified: written without compiling or running.
+
+### Portals, team roles and permissions
+
+One endpoint set serves every portal; what a customer sees and may do depends on their relationship to a
+merchant. A customer belongs to at most one merchant, as its owner or as a team member.
+
+| Portal | Who | Extra |
+| --- | --- | --- |
+| Merchant (`role: STANDALONE`) | a merchant without outlets | payments, settlements, team |
+| Franchise / main merchant (`role: MAIN`) | a BUSINESS merchant with outlets | outlets, royalty, outlet payments (read-only), invites |
+| Franchisee / outlet (`role: OUTLET`) | a merchant that joined with an invite | own payments and settlements, sees its franchise terms, no network, plan from the main merchant |
+
+Team roles (`GET /roles` lists them with permissions). The registering customer is `OWNER`; the owner invites
+the rest with an invite code (`POST /me/team/invites`, joined with `POST /team/join`; preview
+`GET /team/invites/{code}`). Limits: 2 team members on STARTER, 10 on BUSINESS (outlets use their main
+merchant's plan). No KYC is needed to join a team.
+
+| Permission | OWNER | MANAGER | ACCOUNTANT | CASHIER | VIEWER |
+| --- | --- | --- | --- | --- | --- |
+| VIEW_PAYMENTS | yes | yes | yes | yes | yes |
+| REFUND | yes | yes | | | |
+| VIEW_SETTLEMENTS (balance, settlement account) | yes | yes | yes | | yes |
+| SETTLE | yes | yes | yes | | |
+| VIEW_NETWORK | yes | yes | yes | | yes |
+| MANAGE_NETWORK (invite, suspend outlets) | yes | yes | | | |
+| MANAGE_PLAN, MANAGE_TEAM | yes | | | | |
+
+A call without the permission returns `403 MERCHANT_PERMISSION_DENIED`. `GET /me` returns `teamRole` and
+`permissions`; balance, settlement account and royalty on hold are `null` for roles without VIEW_SETTLEMENTS.
+
+| Endpoint | Notes |
+| --- | --- |
+| `GET /me/team` | owner only: members, pending invites, `maxMembers` |
+| `POST /me/team/invites` | `{role, label}`, `OWNER` cannot be invited; valid 7 days |
+| `DELETE /me/team/invites/{inviteCode}` | cancel |
+| `PUT /me/team/members/{memberCode}` | `{role}` |
+| `DELETE /me/team/members/{memberCode}` | remove |
+| `POST /me/team/leave` | a member leaves (the owner cannot) |
+| `GET /me/network/outlets/{merchantCode}/payments` | main merchant reads an outlet's payments: amount, royalty, status; no payer, no fee |
+
+### QR payments
+
+| Endpoint | Notes |
+| --- | --- |
+| `GET /api/v1/merchants/me/qr` | the merchant's counter QR: `payload` (the link it opens), `svg` (the rendered code). Any role with VIEW_PAYMENTS. |
+| `GET /api/v1/merchants/me/qr?amount=500.00&note=Table 4` | a bill QR with a fixed amount (at least 1.00, at most the plan's per-payment limit) |
+
+The QR encodes `{WEB_BASE_URL}/pay-merchant?m=MER...&amt=...&note=...`: the merchant code, amount and note only,
+no internal ids. `WEB_BASE_URL` (default `http://localhost:3000`) must be the address of the web app, e.g. the Vercel
+URL, so a phone camera opens the right site. The pay page pre-fills the merchant and locks the amount of a bill QR,
+and also has an in-app scanner (browser BarcodeDetector). The payment itself is the normal
+`POST /{merchantCode}/pay`, so all limits and checks apply. The web app needs the camera permission
+(`Permissions-Policy: camera=(self)`).
+
+## Paying a merchant without signing in (Razorpay)
+
+Public endpoints, no token needed:
+
+| Call | Purpose |
+|------|---------|
+| `GET /api/v1/merchants/lookup/{code}?amt=&sig=` | Merchant name for the pay page. A link with `amt` must carry its `sig`; the response then has `lockedAmount`. |
+| `POST /api/v1/merchants/{code}/guest-pay/orders` | Body `{amount, sig?, name, email, note?}`. Creates a Razorpay order; returns `razorpayKeyId`, `razorpayOrderId`, `amountPaise` for Checkout. |
+| `POST /api/v1/merchants/guest-pay/{paymentReference}/confirm` | Body `{razorpayOrderId, razorpayPaymentId, razorpaySignature}` from Checkout's success callback. Verified, then booked. |
+| `POST /api/v1/webhooks/razorpay` | Razorpay webhook (`payment.captured`, `order.paid`), verified with `X-Razorpay-Signature`. Whichever of confirm and webhook arrives first books the payment. |
+
+**Fixed-amount links.** A merchant QR with an amount is `/pay-merchant?m=CODE&amt=1000.00&sig=...`. `sig` is an HMAC of the merchant code and amount (`QR_SIGNING_SECRET`), so editing `amt` makes the link invalid, and the order and pay endpoints refuse an amount that does not match `sig`. Links made before this change have no `sig` and are refused until the merchant generates the QR again.
+
+**Money.** A guest payment debits the `FCGATEWAY0001` account and credits the system hold, then settles to the merchant like any other payment. The payer gets an emailed receipt. Guest payments cannot be refunded through `/me/payments/{reference}/refund` yet.
+
+Config: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`, `QR_SIGNING_SECRET`. The webhook needs a public URL (the tunnel).
